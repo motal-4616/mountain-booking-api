@@ -3,6 +3,7 @@
 ## CHUẨN BỊ ✅
 
 Files đã được tạo sẵn:
+
 - ✅ `Procfile` - Railway start command
 - ✅ `nixpacks.toml` - Build configuration
 - ✅ `.env.railway` - Environment template
@@ -175,8 +176,8 @@ Nên thấy JSON response với danh sách tours.
 
 ```typescript
 export const environment = {
-  production: false,
-  apiUrl: 'https://YOUR_RAILWAY_DOMAIN/api'
+    production: false,
+    apiUrl: "https://YOUR_RAILWAY_DOMAIN/api",
 };
 ```
 
@@ -184,8 +185,8 @@ export const environment = {
 
 ```typescript
 export const environment = {
-  production: true,
-  apiUrl: 'https://YOUR_RAILWAY_DOMAIN/api'
+    production: true,
+    apiUrl: "https://YOUR_RAILWAY_DOMAIN/api",
 };
 ```
 
@@ -218,6 +219,7 @@ npm run build-apk
 ### Lỗi "500 Internal Server Error"
 
 **Check logs:**
+
 ```bash
 railway logs
 ```
@@ -225,6 +227,7 @@ railway logs
 **Nguyên nhân thường gặp:**
 
 1. **APP_KEY chưa đúng:**
+
 ```bash
 # Generate key mới
 php artisan key:generate --show
@@ -233,11 +236,13 @@ php artisan key:generate --show
 ```
 
 2. **Database chưa migrate:**
+
 ```bash
 railway run php artisan migrate --force
 ```
 
 3. **Cache cũ:**
+
 ```bash
 railway run php artisan config:clear
 railway run php artisan cache:clear
@@ -247,16 +252,19 @@ railway run php artisan route:clear
 ### Lỗi "CORS Policy"
 
 Check CORS config trong Railway Variables:
+
 ```env
 SANCTUM_STATEFUL_DOMAINS=*
 ```
 
 Hoặc restart service:
+
 - Railway Dashboard → Service → Settings → **Restart**
 
 ### Lỗi "Database connection failed"
 
 Check MySQL variables:
+
 ```env
 DB_HOST=${{MySQL.MYSQLHOST}}
 DB_PORT=${{MySQL.MYSQLPORT}}
@@ -278,11 +286,13 @@ Xem build logs trong Railway dashboard.
 ## 📊 MONITOR & MAINTAIN
 
 ### View Logs
+
 ```bash
 railway logs --follow
 ```
 
 ### Redeploy
+
 ```bash
 git add .
 git commit -m "Update something"
@@ -291,11 +301,13 @@ git push origin main
 ```
 
 ### Database Backup
+
 ```bash
 railway run php artisan db:backup
 ```
 
 ### Scale Up (nếu cần)
+
 - Railway Settings → Resources → Adjust RAM/CPU
 
 ---

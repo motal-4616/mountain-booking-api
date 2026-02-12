@@ -3,13 +3,16 @@
 ## TÓM TẮT 3 BƯỚC
 
 ### 1️⃣ PUSH LÊN GITHUB
+
 ```bash
 cd mountain_booking_web
 PUSH_TO_GITHUB.bat
 ```
+
 → Tạo repo "mountain-booking-api" trên GitHub trước
 
 ### 2️⃣ DEPLOY RAILWAY
+
 - Truy cập: https://railway.app
 - New Project → Deploy from GitHub
 - Chọn repo → Add MySQL
@@ -17,6 +20,7 @@ PUSH_TO_GITHUB.bat
 - Generate Domain
 
 ### 3️⃣ UPDATE APP
+
 ```bash
 UPDATE_MOBILE_APP.bat
 # Nhập Railway URL
@@ -34,27 +38,28 @@ UPDATE_MOBILE_APP.bat
 
 ## 🔧 SCRIPTS
 
-| File | Mô tả |
-|------|-------|
-| `PUSH_TO_GITHUB.bat` | Push code lên GitHub |
+| File                    | Mô tả                         |
+| ----------------------- | ----------------------------- |
+| `PUSH_TO_GITHUB.bat`    | Push code lên GitHub          |
 | `UPDATE_MOBILE_APP.bat` | Cập nhật URL trong mobile app |
-| `railway-deploy.sh` | Deploy script (Linux/Mac) |
+| `railway-deploy.sh`     | Deploy script (Linux/Mac)     |
 
 ---
 
 ## 📁 FILES CHO RAILWAY
 
-| File | Mục đích |
-|------|---------|
-| `Procfile` | Start command |
-| `nixpacks.toml` | Build config |
-| `.env.railway` | Environment template |
+| File            | Mục đích             |
+| --------------- | -------------------- |
+| `Procfile`      | Start command        |
+| `nixpacks.toml` | Build config         |
+| `.env.railway`  | Environment template |
 
 ---
 
 ## ⚡ TROUBLESHOOTING NHANH
 
 **500 Error:**
+
 ```bash
 railway logs
 railway run php artisan config:clear
@@ -71,11 +76,13 @@ Set `SANCTUM_STATEFUL_DOMAINS=*`
 ## 🎯 RAILWAY URL
 
 Sau khi deploy, Railway sẽ cho URL kiểu:
+
 ```
 https://mountain-booking-api-production-xxxx.up.railway.app
 ```
 
 API endpoint:
+
 ```
 https://mountain-booking-api-production-xxxx.up.railway.app/api
 ```

@@ -20,6 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('booking:check-schedules')->hourly();
     })
     ->withMiddleware(function (Middleware $middleware): void {
+        // Trust Railway reverse proxy (HTTPS)
+        $middleware->trustProxies(at: '*');
+        
         // Đăng ký middleware alias cho admin
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,

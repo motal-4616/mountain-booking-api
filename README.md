@@ -101,12 +101,14 @@ Test API: **http://localhost:8000/api/tours**
 ### Quick Deploy (3 phút)
 
 **1️⃣ Push lên GitHub:**
+
 ```bash
 # Chạy script tự động
 PUSH_TO_GITHUB.bat
 ```
 
 **2️⃣ Deploy trên Railway:**
+
 - Truy cập: https://railway.app
 - New Project → **Deploy from GitHub repo**
 - Chọn repo: **mountain-booking-api**
@@ -116,6 +118,7 @@ PUSH_TO_GITHUB.bat
 - ✅ Done!
 
 **3️⃣ Run migrations:**
+
 ```bash
 npm install -g @railway/cli
 railway login
@@ -136,25 +139,26 @@ Base URL Local: `http://localhost:8000/api`
 
 ### Authentication
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| POST | `/register` | Đăng ký tài khoản | ❌ |
-| POST | `/login` | Đăng nhập | ❌ |
-| POST | `/logout` | Đăng xuất | ✅ |
-| GET | `/user` | Lấy thông tin user | ✅ |
-| PUT | `/user` | Cập nhật profile | ✅ |
-| POST | `/change-password` | Đổi mật khẩu | ✅ |
+| Method | Endpoint           | Description        | Auth Required |
+| ------ | ------------------ | ------------------ | ------------- |
+| POST   | `/register`        | Đăng ký tài khoản  | ❌            |
+| POST   | `/login`           | Đăng nhập          | ❌            |
+| POST   | `/logout`          | Đăng xuất          | ✅            |
+| GET    | `/user`            | Lấy thông tin user | ✅            |
+| PUT    | `/user`            | Cập nhật profile   | ✅            |
+| POST   | `/change-password` | Đổi mật khẩu       | ✅            |
 
 ### Tours
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| GET | `/tours` | Danh sách tours (pagination) | ❌ |
-| GET | `/tours/{id}` | Chi tiết tour | ❌ |
-| GET | `/tours/{id}/schedules` | Lịch khởi hành | ❌ |
-| GET | `/tours/{id}/reviews` | Đánh giá tour | ❌ |
+| Method | Endpoint                | Description                  | Auth Required |
+| ------ | ----------------------- | ---------------------------- | ------------- |
+| GET    | `/tours`                | Danh sách tours (pagination) | ❌            |
+| GET    | `/tours/{id}`           | Chi tiết tour                | ❌            |
+| GET    | `/tours/{id}/schedules` | Lịch khởi hành               | ❌            |
+| GET    | `/tours/{id}/reviews`   | Đánh giá tour                | ❌            |
 
 **Query Parameters:**
+
 - `search` - Tìm kiếm theo tên tour
 - `difficulty` - Lọc theo độ khó (easy, moderate, challenging, expert)
 - `min_price`, `max_price` - Lọc theo giá
@@ -163,26 +167,26 @@ Base URL Local: `http://localhost:8000/api`
 
 ### Bookings
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| GET | `/bookings` | Danh sách booking của user | ✅ |
-| POST | `/bookings` | Tạo booking mới | ✅ |
-| GET | `/bookings/{id}` | Chi tiết booking | ✅ |
-| PUT | `/bookings/{id}/cancel` | Hủy booking | ✅ |
+| Method | Endpoint                | Description                | Auth Required |
+| ------ | ----------------------- | -------------------------- | ------------- |
+| GET    | `/bookings`             | Danh sách booking của user | ✅            |
+| POST   | `/bookings`             | Tạo booking mới            | ✅            |
+| GET    | `/bookings/{id}`        | Chi tiết booking           | ✅            |
+| PUT    | `/bookings/{id}/cancel` | Hủy booking                | ✅            |
 
 ### Coupons
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| POST | `/coupons/validate` | Kiểm tra mã giảm giá | ✅ |
+| Method | Endpoint            | Description          | Auth Required |
+| ------ | ------------------- | -------------------- | ------------- |
+| POST   | `/coupons/validate` | Kiểm tra mã giảm giá | ✅            |
 
 ### Reviews
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| POST | `/reviews` | Viết review | ✅ |
-| PUT | `/reviews/{id}` | Sửa review | ✅ |
-| DELETE | `/reviews/{id}` | Xóa review | ✅ |
+| Method | Endpoint        | Description | Auth Required |
+| ------ | --------------- | ----------- | ------------- |
+| POST   | `/reviews`      | Viết review | ✅            |
+| PUT    | `/reviews/{id}` | Sửa review  | ✅            |
+| DELETE | `/reviews/{id}` | Xóa review  | ✅            |
 
 ---
 
@@ -191,12 +195,14 @@ Base URL Local: `http://localhost:8000/api`
 ### Main Tables
 
 **users**
+
 - id, name, email, password
 - phone, date_of_birth, gender
 - emergency_contact, role
 - timestamps
 
 **tours**
+
 - id, title, description
 - location, duration, difficulty
 - price, max_participants
@@ -204,23 +210,27 @@ Base URL Local: `http://localhost:8000/api`
 - timestamps
 
 **tour_schedules**
+
 - id, tour_id, start_date, end_date
 - available_slots, status
 - timestamps
 
 **bookings**
+
 - id, user_id, tour_id, schedule_id
 - number_of_participants, total_price
 - status, payment_method
 - timestamps
 
 **payments**
+
 - id, booking_id, amount
 - payment_method, status
 - transaction_id
 - timestamps
 
 **coupons**
+
 - id, code, discount_type, discount_value
 - min_purchase, max_discount
 - valid_from, valid_until
@@ -228,6 +238,7 @@ Base URL Local: `http://localhost:8000/api`
 - timestamps
 
 **reviews**
+
 - id, user_id, tour_id
 - rating, comment
 - timestamps
@@ -269,13 +280,13 @@ curl https://your-app.railway.app/api/user \
 
 ## 👥 Roles & Permissions
 
-| Role | Quyền |
-|------|-------|
-| **User** | Browse tours, booking, review |
-| **Content Manager** | Quản lý tours, blogs |
-| **Booking Manager** | Quản lý bookings, payments |
-| **Admin** | Full access trừ system settings |
-| **Super Admin** | Full system access |
+| Role                | Quyền                           |
+| ------------------- | ------------------------------- |
+| **User**            | Browse tours, booking, review   |
+| **Content Manager** | Quản lý tours, blogs            |
+| **Booking Manager** | Quản lý bookings, payments      |
+| **Admin**           | Full access trừ system settings |
+| **Super Admin**     | Full system access              |
 
 ---
 
@@ -311,12 +322,14 @@ php artisan route:clear
 ### Lỗi: "Database connection failed"
 
 Kiểm tra file `.env`:
+
 - `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` đúng chưa
 - MySQL service đã chạy chưa
 
 ### Lỗi: "CORS Policy"
 
 Cấu hình trong `.env`:
+
 ```env
 SANCTUM_STATEFUL_DOMAINS=*
 ```
@@ -375,11 +388,13 @@ railway run php artisan migrate --force
 ## 📊 Monitoring
 
 ### Railway Dashboard
+
 - **Logs**: Real-time logs
 - **Metrics**: CPU, Memory usage
 - **Deployments**: History & rollback
 
 ### Health Check
+
 ```
 GET /up
 ```

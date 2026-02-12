@@ -25,6 +25,7 @@ API sẽ chạy tại: `http://localhost:8000`
 ## 🚂 Deploy lên Railway
 
 ### Prerequisites
+
 - Git đã cài đặt
 - GitHub account
 - Railway account (free tier OK)
@@ -32,6 +33,7 @@ API sẽ chạy tại: `http://localhost:8000`
 ### Deployment Steps
 
 **1. Push code lên GitHub:**
+
 ```bash
 # Chạy script tự động
 PUSH_TO_GITHUB.bat
@@ -49,6 +51,7 @@ git push -u origin main
 Đọc hướng dẫn chi tiết trong file: **[RAILWAY_DEPLOYMENT_GUIDE.md](RAILWAY_DEPLOYMENT_GUIDE.md)**
 
 Hoặc làm theo:
+
 - Truy cập https://railway.app
 - New Project → Deploy from GitHub
 - Chọn repo `mountain-booking-api`
@@ -58,6 +61,7 @@ Hoặc làm theo:
 - Run migrations
 
 **3. Quick deploy với Railway CLI:**
+
 ```bash
 npm install -g @railway/cli
 railway link
@@ -92,6 +96,7 @@ mountain_booking_web/
 Base URL: `https://your-app.railway.app/api`
 
 ### Authentication
+
 ```
 POST   /register              # Register new user
 POST   /login                 # Login
@@ -100,6 +105,7 @@ GET    /user                  # Get current user (auth required)
 ```
 
 ### Tours
+
 ```
 GET    /tours                 # List all tours (pagination, filters)
 GET    /tours/{id}            # Tour details
@@ -108,6 +114,7 @@ GET    /tours/{id}/reviews    # Tour reviews
 ```
 
 ### Bookings
+
 ```
 GET    /bookings              # User's bookings
 POST   /bookings              # Create booking
@@ -116,6 +123,7 @@ PUT    /bookings/{id}/cancel  # Cancel booking
 ```
 
 ### Coupons
+
 ```
 POST   /coupons/validate      # Validate coupon code
 ```
@@ -128,6 +136,7 @@ Full API docs: Check Postman collection (nếu có)
 - **MySQL/MariaDB** (local development)
 
 ### Main Tables:
+
 - users
 - tours
 - tour_schedules
@@ -174,11 +183,13 @@ php artisan make:controller Api/ControllerName
 ## 📊 Monitoring
 
 ### Railway Dashboard
+
 - View logs: `railway logs --follow`
 - Restart: Railway Dashboard → Service → Restart
 - Metrics: CPU, Memory usage trong dashboard
 
 ### Health Check
+
 ```bash
 curl https://your-app.railway.app/up
 ```
@@ -186,6 +197,7 @@ curl https://your-app.railway.app/up
 ## 🐛 Troubleshooting
 
 ### 500 Error
+
 ```bash
 # Check logs
 railway logs
@@ -196,11 +208,13 @@ railway run php artisan cache:clear
 ```
 
 ### Database Connection Error
+
 - Kiểm tra environment variables
 - Đảm bảo MySQL service đang chạy
 - Verify DB credentials
 
 ### CORS Issues
+
 - Set `SANCTUM_STATEFUL_DOMAINS=*` trong Railway Variables
 - Restart service
 

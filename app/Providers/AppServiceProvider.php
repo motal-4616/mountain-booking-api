@@ -31,8 +31,8 @@ class AppServiceProvider extends ServiceProvider
             \App\Console\Commands\UpdateCompletedBookings::class,
         ]);
         
-        // Force HTTPS for ngrok
-        if (config('app.env') === 'local' && request()->header('X-Forwarded-Proto') === 'https') {
+        // Force HTTPS in production (Railway) or ngrok
+        if (config('app.env') === 'production' || request()->header('X-Forwarded-Proto') === 'https') {
             URL::forceScheme('https');
         }
         
