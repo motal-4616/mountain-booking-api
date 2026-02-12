@@ -18,64 +18,12 @@ use App\Http\Controllers\Admin\BookingController as AdminBookingController;
 use App\Http\Controllers\Admin\ReviewController as AdminReviewController;
 use App\Http\Controllers\Admin\CouponController as AdminCouponController;
 use App\Http\Controllers\Admin\RevenueController;
-use Illuminate\Support\Facades\Storage;
 
 /*
 |--------------------------------------------------------------------------
 | Web Routes - Định nghĩa các đường dẫn của website
 |--------------------------------------------------------------------------
 */
-
-// ===== DEBUG STORAGE (tạm thời) =====
-Route::get('/debug-storage', function () {
-    $storagePath = storage_path('app/public');
-    $publicStoragePath = public_path('storage');
-    $result = [
-        'storage_path' => $storagePath,
-        'storage_exists' => is_dir($storagePath),
-        'public_storage_path' => $publicStoragePath,
-        'public_storage_exists' => file_exists($publicStoragePath),
-        'public_storage_is_link' => is_link($publicStoragePath),
-    ];
-    
-    // List files in storage/app/public
-    if (is_dir($storagePath)) {
-        $result['storage_contents'] = scandir($storagePath);
-        if (is_dir($storagePath . '/avatars')) {
-            $result['avatars_contents'] = scandir($storagePath . '/avatars');
-        }
-    }
-    
-    // Check symlink target
-    if (is_link($publicStoragePath)) {
-        $result['symlink_target'] = readlink($publicStoragePath);
-    }
-    
-    return response()->json($result, 200, [], JSON_PRETTY_PRINT);
-});
-
-// ===== SERVE STORAGE FILES (cho Railway Volume) =====
-Route::get('/storage/{path}', function (string $path) {
-    $fullPath = storage_path('app/public/' . $path);
-    
-    if (!file_exists($fullPath)) {
-        // Debug: return info about what we're looking for
-        return response()->json([
-            'error' => 'File not found',
-            'looking_for' => $fullPath,
-            'exists' => file_exists($fullPath),
-            'dir_exists' => is_dir(dirname($fullPath)),
-            'path_requested' => $path,
-        ], 404);
-    }
-    
-    $mimeType = mime_content_type($fullPath) ?: 'application/octet-stream';
-    
-    return response()->file($fullPath, [
-        'Content-Type' => $mimeType,
-        'Cache-Control' => 'public, max-age=31536000',
-    ]);
-})->where('path', '.*')->name('storage.serve');
 
 // ===== TRANG CÔNG KHAI =====
 
