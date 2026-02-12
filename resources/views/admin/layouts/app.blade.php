@@ -316,8 +316,8 @@
         // Load notifications on page load
         loadNotifications();
         
-        // Refresh every 30 seconds
-        setInterval(loadNotifications, 30000);
+        // Refresh every 10 seconds (faster)
+        setInterval(loadNotifications, 10000);
     });
     </script>
     

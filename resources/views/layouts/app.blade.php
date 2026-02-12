@@ -442,13 +442,13 @@
             .then(data => updateNotificationCount(data.count))
             .catch(error => console.error('Error loading count:', error));
             
-        // Poll for new notifications every 30 seconds
+        // Poll for new notifications every 10 seconds (faster)
         setInterval(() => {
             fetch('{{ route("notifications.count") }}')
                 .then(response => response.json())
                 .then(data => updateNotificationCount(data.count))
                 .catch(error => console.error('Error polling count:', error));
-        }, 30000);
+        }, 10000);
         @endauth
         
         // Close notifications when clicking outside
