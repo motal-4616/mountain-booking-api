@@ -253,7 +253,14 @@ class User extends Authenticatable
     public function getAvatarUrlAttribute()
     {
         if ($this->avatar) {
-            return asset('storage/' . $this->avatar);
+            // Check if file exists in storage
+            if (\Illuminate\Support\Facades\Storage::disk('public')->exists($this->avatar)) {
+                return asset('storage/' . $this->avatar);
+            }
+            // If avatar path starts with http, return as-is
+            if (str_starts_with($this->avatar, 'http')) {
+                return $this->avatar;
+            }
         }
         
         return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&background=2563eb&color=fff';
