@@ -158,7 +158,7 @@ class ApiChatController extends ApiController
                 'type' => 'nullable|in:text,image,video,voice,location',
                 'body' => 'required_if:type,text|required_without:type|nullable|string|max:5000',
                 'image' => 'required_if:type,image|nullable|image|mimes:jpeg,png,jpg,webp|max:10240',
-                'video' => 'required_if:type,video|nullable|file|mimes:mp4,mov,avi,webm|max:51200',
+                'video' => 'required_if:type,video|nullable|file|mimetypes:video/mp4,video/quicktime,video/x-msvideo,video/webm,video/x-matroska,video/3gpp|max:51200',
                 'voice' => 'required_if:type,voice|nullable|file|mimes:mp3,wav,ogg,m4a|max:10240',
                 'latitude' => 'required_if:type,location|nullable|numeric',
                 'longitude' => 'required_if:type,location|nullable|numeric',
@@ -169,6 +169,11 @@ class ApiChatController extends ApiController
                 'body.max' => 'Tin nhắn không được vượt quá 5000 ký tự',
                 'image.required_if' => 'Ảnh là bắt buộc cho tin nhắn dạng hình ảnh',
                 'image.max' => 'Ảnh không được vượt quá 10MB',
+                'image.mimes' => 'Ảnh phải có định dạng jpeg, png, jpg hoặc webp',
+                'video.required_if' => 'Video là bắt buộc cho tin nhắn dạng video',
+                'video.max' => 'Video không được vượt quá 50MB',
+                'video.mimes' => 'Video phải có định dạng mp4, mov, avi hoặc webm',
+                'voice.max' => 'File ghi âm không được vượt quá 10MB',
             ]);
 
             if ($validator->fails()) {
@@ -188,12 +193,19 @@ class ApiChatController extends ApiController
                     break;
 
                 case 'video':
-                    $path = $request->file('video')->store('chat/videos', 'public');
+                    if (!$request->hasFile('video')) {
+                        return $this->errorResponse('Video file không hợp lệ');
+                    }
+                    $videoFile = $request->file('video');
+                    if (!$videoFile->isValid()) {
+                        return $this->errorResponse('Video file bị lỗi khi upload');
+                    }
+                    $path = $videoFile->store('chat/videos', 'public');
                     $body = $path;
                     $metadata = [
-                        'original_name' => $request->file('video')->getClientOriginalName(),
-                        'mime_type' => $request->file('video')->getMimeType(),
-                        'size' => $request->file('video')->getSize(),
+                        'original_name' => $videoFile->getClientOriginalName(),
+                        'mime_type' => $videoFile->getMimeType(),
+                        'size' => $videoFile->getSize(),
                     ];
                     break;
 
