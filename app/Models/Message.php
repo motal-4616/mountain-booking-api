@@ -43,6 +43,7 @@ class Message extends Model
         return match ($this->type) {
             'text' => \Illuminate\Support\Str::limit($this->body, 50),
             'image' => '📷 Đã gửi ảnh',
+            'video' => '🎬 Đã gửi video',
             'voice' => '🎤 Tin nhắn thoại',
             'location' => '📍 Đã chia sẻ vị trí',
             'system' => $this->body ?? 'Thông báo hệ thống',
@@ -52,8 +53,20 @@ class Message extends Model
 
     public function getImageUrlAttribute(): ?string
     {
-        if ($this->type !== 'image' || !$this->metadata) return null;
-        $path = $this->metadata['image_path'] ?? null;
+        if ($this->type !== 'image') return null;
+        
+        // Đường dẫn ảnh được lưu trong body (không phải metadata)
+        $path = $this->body;
+        if (!$path) return null;
+        if (str_starts_with($path, 'http')) return $path;
+        return asset('storage/' . $path);
+    }
+
+    public function getVideoUrlAttribute(): ?string
+    {
+        if ($this->type !== 'video') return null;
+        
+        $path = $this->body;
         if (!$path) return null;
         if (str_starts_with($path, 'http')) return $path;
         return asset('storage/' . $path);

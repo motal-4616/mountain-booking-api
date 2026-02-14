@@ -155,9 +155,10 @@ class ApiChatController extends ApiController
             }
 
             $validator = Validator::make($request->all(), [
-                'type' => 'nullable|in:text,image,voice,location',
+                'type' => 'nullable|in:text,image,video,voice,location',
                 'body' => 'required_if:type,text|required_without:type|nullable|string|max:5000',
                 'image' => 'required_if:type,image|nullable|image|mimes:jpeg,png,jpg,webp|max:10240',
+                'video' => 'required_if:type,video|nullable|file|mimes:mp4,mov,avi,webm|max:51200',
                 'voice' => 'required_if:type,voice|nullable|file|mimes:mp3,wav,ogg,m4a|max:10240',
                 'latitude' => 'required_if:type,location|nullable|numeric',
                 'longitude' => 'required_if:type,location|nullable|numeric',
@@ -184,6 +185,16 @@ class ApiChatController extends ApiController
                     $path = $request->file('image')->store('chat/images', 'public');
                     $body = $path;
                     $metadata = ['original_name' => $request->file('image')->getClientOriginalName()];
+                    break;
+
+                case 'video':
+                    $path = $request->file('video')->store('chat/videos', 'public');
+                    $body = $path;
+                    $metadata = [
+                        'original_name' => $request->file('video')->getClientOriginalName(),
+                        'mime_type' => $request->file('video')->getMimeType(),
+                        'size' => $request->file('video')->getSize(),
+                    ];
                     break;
 
                 case 'voice':
@@ -407,9 +418,13 @@ class ApiChatController extends ApiController
             'created_at' => $message->created_at->toISOString(),
         ];
 
-        // Thêm URL cho ảnh/voice
+        // Thêm URL cho ảnh/video/voice
         if ($message->type === 'image' && $message->body) {
             $data['image_url'] = $message->image_url;
+        }
+
+        if ($message->type === 'video' && $message->body) {
+            $data['video_url'] = $message->video_url;
         }
 
         return $data;

@@ -138,12 +138,13 @@ class ApiFriendController extends ApiController
             // Kiểm tra đã có quan hệ chưa
             $existingStatus = Friendship::getStatus($user->id, $receiverId);
             if ($existingStatus) {
+                $statusStr = $existingStatus['status'] ?? 'unknown';
                 $messages = [
                     'pending' => 'Lời mời kết bạn đã được gửi trước đó',
                     'accepted' => 'Hai bạn đã là bạn bè rồi',
                     'blocked' => 'Không thể gửi lời mời kết bạn',
                 ];
-                return $this->errorResponse($messages[$existingStatus] ?? 'Quan hệ đã tồn tại');
+                return $this->errorResponse($messages[$statusStr] ?? 'Quan hệ đã tồn tại');
             }
 
             $friendship = Friendship::create([
@@ -396,13 +397,13 @@ class ApiFriendController extends ApiController
                 ->limit(20)
                 ->get()
                 ->map(function ($u) use ($user) {
-                    $status = Friendship::getStatus($user->id, $u->id);
+                    $statusData = Friendship::getStatus($user->id, $u->id);
                     return [
                         'id' => $u->id,
                         'name' => $u->name,
                         'avatar_url' => $u->avatar_url,
                         'bio' => $u->bio,
-                        'friendship_status' => $status, // null, pending, accepted, blocked
+                        'friendship_status' => $statusData['status'] ?? null,
                     ];
                 });
 
@@ -430,7 +431,8 @@ class ApiFriendController extends ApiController
             }
 
             $currentUser = $request->user();
-            $friendshipStatus = Friendship::getStatus($currentUser->id, $userId);
+            $friendshipData = Friendship::getStatus($currentUser->id, $userId);
+            $friendshipStatus = $friendshipData['status'] ?? null;
             $friendIds = Friendship::getFriendIds($userId);
 
             // Bạn chung
@@ -455,6 +457,7 @@ class ApiFriendController extends ApiController
                 'blog_posts_count' => $user->blog_posts_count,
                 'mutual_friends_count' => count($mutualFriends),
                 'friendship_status' => $friendshipStatus,
+                'friendship_id' => $friendshipData['id'] ?? null,
                 'is_friend' => $friendshipStatus === 'accepted',
                 'is_following' => $isFollowing,
                 'joined_at' => $user->created_at->toISOString(),

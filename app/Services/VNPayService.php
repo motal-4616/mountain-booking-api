@@ -19,8 +19,30 @@ class VNPayService
         $this->tmnCode = config('services.vnpay.tmn_code');
         $this->hashSecret = config('services.vnpay.hash_secret');
         $this->url = config('services.vnpay.url');
-        $this->returnUrl = config('services.vnpay.return_url');
         $this->apiUrl = config('services.vnpay.api_url');
+
+        // Tự động tạo return URL từ APP_URL thay vì dùng IP local cố định
+        $configReturnUrl = config('services.vnpay.return_url');
+        if ($configReturnUrl && !$this->isLocalUrl($configReturnUrl)) {
+            $this->returnUrl = $configReturnUrl;
+        } else {
+            // Fallback: tạo URL động từ APP_URL + route path
+            $this->returnUrl = rtrim(config('app.url'), '/') . '/payment/vnpay/callback';
+        }
+    }
+
+    /**
+     * Kiểm tra URL có phải local không (192.168.x.x, 127.0.0.1, localhost)
+     */
+    protected function isLocalUrl(string $url): bool
+    {
+        $host = parse_url($url, PHP_URL_HOST);
+        if (!$host) return true;
+        
+        return in_array($host, ['localhost', '127.0.0.1']) 
+            || str_starts_with($host, '192.168.')
+            || str_starts_with($host, '10.')
+            || str_starts_with($host, '172.');
     }
 
     /**
