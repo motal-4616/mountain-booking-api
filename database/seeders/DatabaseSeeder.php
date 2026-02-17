@@ -57,6 +57,7 @@ class DatabaseSeeder extends Seeder
             ScheduleSeeder::class,
             CouponSeeder::class,
             UserAndBlogSeeder::class,
+            JournalSeeder::class,
         ]);
     }
 }

@@ -64,9 +64,10 @@ class ApiTourController extends ApiController
               ->orderBy('departure_date');
         }]);
 
-        // Check wishlist status for authenticated users
-        if (Auth::check()) {
-            $userId = Auth::id();
+        // Check wishlist status for authenticated users (dùng guard sanctum trực tiếp vì route public không có middleware auth:sanctum)
+        $authUser = $request->user('sanctum');
+        if ($authUser) {
+            $userId = $authUser->id;
             $query->addSelect(['is_wishlisted' => Wishlist::selectRaw('1')
                 ->whereColumn('tour_id', 'tours.id')
                 ->where('user_id', $userId)
@@ -163,10 +164,11 @@ class ApiTourController extends ApiController
             }
         ]);
 
-        // Check wishlist status for authenticated users
-        if (Auth::check()) {
+        // Check wishlist status for authenticated users (dùng guard sanctum trực tiếp vì route public)
+        $authUser = request()->user('sanctum');
+        if ($authUser) {
             $tour->is_wishlisted = Wishlist::where('tour_id', $tour->id)
-                ->where('user_id', Auth::id())
+                ->where('user_id', $authUser->id)
                 ->exists();
         }
 

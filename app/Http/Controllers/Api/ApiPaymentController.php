@@ -90,10 +90,26 @@ class ApiPaymentController extends ApiController
                 'status' => 'pending',
             ]);
 
+            // Validate VNPay configuration
+            if (!config('services.vnpay.tmn_code') && !env('VNPAY_TMN_CODE')) {
+                Log::warning('VNPay config missing, using sandbox defaults');
+            }
+
             // Generate VNPay URL with app return URL
-            $orderInfo = "Thanh toán booking #{$booking->id} - {$booking->schedule->tour->name}";
+            $orderInfo = "Thanh to\u00e1n booking #{$booking->id} - {$booking->schedule->tour->name}";
             $appReturnUrl = url('/payment/vnpay/app-return');
             $vnpayUrl = $this->vnPayService->createPaymentUrl($booking, $amountToPay, $orderInfo, $appReturnUrl);
+
+            // Validate generated URL
+            if (empty($vnpayUrl) || !str_starts_with($vnpayUrl, 'http')) {
+                Log::error('VNPay URL generation failed', ['url' => $vnpayUrl]);
+                return $this->errorResponse(
+                    'Không thể tạo link thanh toán VNPay. Vui lòng thử lại.',
+                    null,
+                    'VNPAY_URL_ERROR',
+                    500
+                );
+            }
 
             return $this->successResponse([
                 'payment_id' => $payment->id,

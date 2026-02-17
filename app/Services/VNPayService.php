@@ -16,10 +16,10 @@ class VNPayService
 
     public function __construct()
     {
-        $this->tmnCode = config('services.vnpay.tmn_code');
-        $this->hashSecret = config('services.vnpay.hash_secret');
-        $this->url = config('services.vnpay.url');
-        $this->apiUrl = config('services.vnpay.api_url');
+        $this->tmnCode = config('services.vnpay.tmn_code', 'M4HWXB0D');
+        $this->hashSecret = config('services.vnpay.hash_secret', 'BGBPXZVD92U48YSOKAMVKRJBC0SY4B9J');
+        $this->url = config('services.vnpay.url', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html');
+        $this->apiUrl = config('services.vnpay.api_url', 'https://sandbox.vnpayment.vn/merchant_webapi/api/transaction');
 
         // Tự động tạo return URL từ APP_URL thay vì dùng IP local cố định
         $configReturnUrl = config('services.vnpay.return_url');
@@ -53,7 +53,7 @@ class VNPayService
         $vnp_TxnRef = $booking->id . '_' . time();
         $vnp_OrderInfo = $orderInfo ?: "Thanh toán booking #{$booking->id}";
         $vnp_OrderType = 'billpayment';
-        $vnp_Amount = $amount * 100; // VNPay yêu cầu số tiền * 100
+        $vnp_Amount = (int)($amount * 100); // VNPay yêu cầu số tiền * 100, phải là integer
         $vnp_Locale = 'vn';
         $vnp_BankCode = ''; // Để trống để hiển thị tất cả ngân hàng
         $vnp_IpAddr = request()->ip();
@@ -99,6 +99,13 @@ class VNPayService
             $vnpSecureHash = hash_hmac('sha512', $hashdata, $this->hashSecret);
             $vnp_Url .= 'vnp_SecureHash=' . $vnpSecureHash;
         }
+
+        Log::info('VNPay Payment URL generated', [
+            'vnp_url_base' => $this->url,
+            'return_url' => $vnp_ReturnUrl,
+            'amount' => $vnp_Amount,
+            'txn_ref' => $vnp_TxnRef,
+        ]);
 
         return $vnp_Url;
     }
