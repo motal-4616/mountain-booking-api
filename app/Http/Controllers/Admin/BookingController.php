@@ -67,6 +67,11 @@ class BookingController extends Controller
 
         $booking->update(['status' => 'confirmed']);
 
+        // Gửi thông báo cho user
+        $booking->load(['user', 'schedule.tour']);
+        $notificationService = new NotificationService();
+        $notificationService->notifyBookingConfirmed($booking);
+
         return back()->with('success', 'Đã xác nhận đơn đặt vé #' . $booking->id);
     }
 

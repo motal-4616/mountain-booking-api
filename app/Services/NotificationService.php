@@ -14,6 +14,7 @@ use App\Notifications\SystemAlertNotification;
 use App\Notifications\BookingCancelledNotification;
 use App\Notifications\RefundProcessingNotification;
 use App\Notifications\RefundCompletedNotification;
+use App\Notifications\BookingConfirmedNotification;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 
@@ -433,6 +434,24 @@ class NotificationService
                 'color' => 'danger',
             ]
         );
+    }
+
+    /**
+     * Gửi thông báo khi admin xác nhận booking
+     * -> Gửi cho user (chủ booking)
+     */
+    public function notifyBookingConfirmed(Booking $booking): void
+    {
+        try {
+            $user = $booking->user;
+
+            if ($user) {
+                $user->notify(new BookingConfirmedNotification($booking));
+                Log::info("Booking confirmed notification sent to user #{$user->id} for booking #{$booking->id}");
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to send booking confirmed notification: ' . $e->getMessage());
+        }
     }
 
     /**
