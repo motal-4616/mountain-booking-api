@@ -15,6 +15,12 @@ class JournalSeeder extends Seeder
      */
     public function run(): void
     {
+        // Kiểm tra đã có journal chưa - tránh tạo trùng khi chạy lại
+        if (Journal::count() > 0) {
+            $this->command->info('⏭️  Đã có nhật ký trong database, bỏ qua JournalSeeder.');
+            return;
+        }
+
         // Lấy user mẫu (user@gmail.com = user_id 4, hoặc user đầu tiên có role 'user')
         $user = User::where('role', 'user')->first();
         if (!$user) {

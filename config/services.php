@@ -36,11 +36,11 @@ return [
     ],
 
     'vnpay' => [
-        'tmn_code' => env('VNPAY_TMN_CODE'),
-        'hash_secret' => env('VNPAY_HASH_SECRET'),
-        'url' => env('VNPAY_URL'),
+        'tmn_code' => env('VNPAY_TMN_CODE', 'M4HWXB0D'),
+        'hash_secret' => env('VNPAY_HASH_SECRET', 'BGBPXZVD92U48YSOKAMVKRJBC0SY4B9J'),
+        'url' => env('VNPAY_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'),
         'return_url' => env('VNPAY_RETURN_URL'),
-        'api_url' => env('VNPAY_API_URL'),
+        'api_url' => env('VNPAY_API_URL', 'https://sandbox.vnpayment.vn/merchant_webapi/api/transaction'),
     ],
 
 ];

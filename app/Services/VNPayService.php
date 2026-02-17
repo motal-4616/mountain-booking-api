@@ -16,10 +16,10 @@ class VNPayService
 
     public function __construct()
     {
-        $this->tmnCode = config('services.vnpay.tmn_code', 'M4HWXB0D');
-        $this->hashSecret = config('services.vnpay.hash_secret', 'BGBPXZVD92U48YSOKAMVKRJBC0SY4B9J');
-        $this->url = config('services.vnpay.url', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html');
-        $this->apiUrl = config('services.vnpay.api_url', 'https://sandbox.vnpayment.vn/merchant_webapi/api/transaction');
+        $this->tmnCode = config('services.vnpay.tmn_code') ?: 'M4HWXB0D';
+        $this->hashSecret = config('services.vnpay.hash_secret') ?: 'BGBPXZVD92U48YSOKAMVKRJBC0SY4B9J';
+        $this->url = config('services.vnpay.url') ?: 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
+        $this->apiUrl = config('services.vnpay.api_url') ?: 'https://sandbox.vnpayment.vn/merchant_webapi/api/transaction';
 
         // Tự động tạo return URL từ APP_URL thay vì dùng IP local cố định
         $configReturnUrl = config('services.vnpay.return_url');
