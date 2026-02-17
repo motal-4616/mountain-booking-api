@@ -6,10 +6,11 @@ use App\Models\BlogPost;
 use App\Models\BlogComment;
 use App\Models\BlogLike;
 use App\Models\Friendship;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+
 
 class ApiBlogController extends ApiController
 {
@@ -584,7 +585,7 @@ class ApiBlogController extends ApiController
     private function formatPostDetail(BlogPost $post, $currentUser = null): array
     {
         $data = $this->formatPostSummary($post, $currentUser);
-        $data['content'] = $post->content;
+        $data['content'] = Str::markdown($post->content);
         $data['images'] = $post->images ? array_map(function ($img) {
             return asset('storage/' . $img);
         }, $post->images) : [];
