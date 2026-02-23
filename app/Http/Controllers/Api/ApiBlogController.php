@@ -166,7 +166,7 @@ class ApiBlogController extends ApiController
             }
 
             // Tạo excerpt tự động nếu không có
-            $excerpt = $request->excerpt ?: Str::limit(strip_tags($request->content), 200);
+            $excerpt = $request->excerpt ?: ($request->content ? Str::limit(strip_tags($request->content), 200) : null);
 
             $status = $request->input('status', 'published');
 
@@ -174,11 +174,11 @@ class ApiBlogController extends ApiController
                 'user_id' => $user->id,
                 'title' => $request->title,
                 'slug' => BlogPost::generateSlug($request->title),
-                'content' => $request->content,
+                'content' => $request->content ?? '',
                 'excerpt' => $excerpt,
                 'cover_image' => $coverImagePath,
                 'images' => $imagePaths ?: null,
-                'category' => $request->category,
+                'category' => $request->category ?? 'stories',
                 'tags' => $request->tags ?: null,
                 'status' => $status,
                 'tour_id' => $request->tour_id,
@@ -214,11 +214,13 @@ class ApiBlogController extends ApiController
                 return $this->forbiddenResponse('Bạn không có quyền chỉnh sửa bài viết này');
             }
 
+            $isDraft = $request->input('status', $post->status) === 'draft';
+
             $validator = Validator::make($request->all(), [
                 'title' => 'sometimes|required|string|min:5|max:255',
-                'content' => 'sometimes|required|string|min:20',
+                'content' => $isDraft ? 'nullable|string' : 'sometimes|required|string|min:20',
                 'excerpt' => 'nullable|string|max:500',
-                'category' => 'sometimes|required|in:guide,tips,reviews,stories',
+                'category' => $isDraft ? 'nullable|in:guide,tips,reviews,stories' : 'sometimes|required|in:guide,tips,reviews,stories',
                 'tags' => 'nullable|array|max:10',
                 'tags.*' => 'string|max:50',
                 'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
