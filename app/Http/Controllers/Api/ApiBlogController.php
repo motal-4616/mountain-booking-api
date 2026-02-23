@@ -118,11 +118,13 @@ class ApiBlogController extends ApiController
     public function store(Request $request)
     {
         try {
-            $validator = Validator::make($request->all(), [
+            $isDraft = $request->input('status') === 'draft';
+
+            $rules = [
                 'title' => 'required|string|min:5|max:255',
-                'content' => 'required|string|min:20',
+                'content' => $isDraft ? 'nullable|string' : 'required|string|min:20',
                 'excerpt' => 'nullable|string|max:500',
-                'category' => 'required|in:guide,tips,reviews,stories',
+                'category' => $isDraft ? 'nullable|in:guide,tips,reviews,stories' : 'required|in:guide,tips,reviews,stories',
                 'tags' => 'nullable|array|max:10',
                 'tags.*' => 'string|max:50',
                 'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
@@ -130,7 +132,9 @@ class ApiBlogController extends ApiController
                 'images.*' => 'image|mimes:jpeg,png,jpg,webp|max:5120',
                 'status' => 'nullable|in:draft,published',
                 'tour_id' => 'nullable|exists:tours,id',
-            ], [
+            ];
+
+            $validator = Validator::make($request->all(), $rules, [
                 'title.required' => 'Tiêu đề là bắt buộc',
                 'title.min' => 'Tiêu đề phải có ít nhất 5 ký tự',
                 'content.required' => 'Nội dung là bắt buộc',
