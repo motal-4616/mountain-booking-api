@@ -21,7 +21,7 @@ class ApiFriendController extends ApiController
             $friendIds = Friendship::getFriendIds($user->id);
 
             $query = User::whereIn('id', $friendIds)
-                ->select('id', 'name', 'avatar', 'bio');
+                ->select('id', 'name', 'avatar', 'bio', 'current_level');
 
             // Tìm kiếm theo tên
             if ($request->has('search') && $request->search) {
@@ -34,6 +34,7 @@ class ApiFriendController extends ApiController
                     'name' => $friend->name,
                     'avatar_url' => $friend->avatar_url,
                     'bio' => $friend->bio,
+                    'current_level' => $friend->current_level ?? 1,
                     'friendship_status' => 'accepted',
                 ];
             });
@@ -393,7 +394,7 @@ class ApiFriendController extends ApiController
                     $q->where('name', 'like', "%{$search}%")
                       ->orWhere('email', 'like', "%{$search}%");
                 })
-                ->select('id', 'name', 'avatar', 'bio')
+                ->select('id', 'name', 'avatar', 'bio', 'current_level')
                 ->limit(20)
                 ->get()
                 ->map(function ($u) use ($user) {
@@ -403,6 +404,7 @@ class ApiFriendController extends ApiController
                         'name' => $u->name,
                         'avatar_url' => $u->avatar_url,
                         'bio' => $u->bio,
+                        'current_level' => $u->current_level ?? 1,
                         'friendship_status' => $statusData['status'] ?? null,
                     ];
                 });
@@ -420,7 +422,7 @@ class ApiFriendController extends ApiController
     public function profile(Request $request, int $userId)
     {
         try {
-            $user = User::select('id', 'name', 'email', 'avatar', 'bio', 'address', 'created_at')
+            $user = User::select('id', 'name', 'email', 'avatar', 'bio', 'address', 'created_at', 'current_level')
                 ->withCount(['bookings', 'reviews', 'blogPosts' => function ($q) {
                     $q->where('status', 'published');
                 }])
@@ -451,6 +453,7 @@ class ApiFriendController extends ApiController
                 'avatar_url' => $user->avatar_url,
                 'bio' => $user->bio,
                 'address' => $user->address,
+                'current_level' => $user->current_level ?? 1,
                 'friends_count' => count($friendIds),
                 'bookings_count' => $user->bookings_count,
                 'reviews_count' => $user->reviews_count,
@@ -542,7 +545,7 @@ class ApiFriendController extends ApiController
             $suggestions = User::whereNotIn('id', $excludeIds)
                 ->where('role', 'user')
                 ->where('is_blocked', false)
-                ->select('id', 'name', 'avatar', 'bio')
+                ->select('id', 'name', 'avatar', 'bio', 'current_level')
                 ->inRandomOrder()
                 ->limit(10)
                 ->get()
@@ -556,6 +559,7 @@ class ApiFriendController extends ApiController
                         'name' => $u->name,
                         'avatar_url' => $u->avatar_url,
                         'bio' => $u->bio,
+                        'current_level' => $u->current_level ?? 1,
                         'mutual_friends_count' => $mutualCount,
                         'friendship_status' => null,
                     ];
