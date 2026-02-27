@@ -20,6 +20,8 @@ class User extends Authenticatable
         'phone',
         'password',
         'role',
+        'current_level',
+        'level_discount',
         'is_blocked',
         'avatar',
         'bio',
@@ -44,7 +46,25 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'date_of_birth' => 'date',
+            'current_level' => 'integer',
+            'level_discount' => 'decimal:2',
         ];
+    }
+
+    /**
+     * Lấy thông tin level hiện tại
+     */
+    public function getLevelInfoAttribute(): ?UserLevel
+    {
+        return UserLevel::getForLevel($this->current_level ?? 1);
+    }
+
+    /**
+     * Lấy thông tin level tiếp theo
+     */
+    public function getNextLevelInfoAttribute(): ?UserLevel
+    {
+        return UserLevel::getForLevel(($this->current_level ?? 1) + 1);
     }
 
     /**

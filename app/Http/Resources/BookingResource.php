@@ -23,6 +23,7 @@ class BookingResource extends JsonResource
             'contact_email' => $this->contact_email,
             'note' => $this->note,
             'total_amount' => (float) $this->total_amount,
+            'level_discount_amount' => (float) ($this->level_discount_amount ?? 0),
             'discount_amount' => (float) $this->discount_amount,
             'final_price' => (float) $this->final_price,
             'status' => $this->status,

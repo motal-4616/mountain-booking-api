@@ -25,8 +25,9 @@ class Booking extends Model
         'contact_email',
         'note',
         'total_amount',      // Giá gốc (quantity * price)
-        'discount_amount',   // Số tiền giảm giá
-        'final_price',       // Giá cuối cùng = total_amount - discount_amount
+        'level_discount_amount', // Số tiền giảm từ level
+        'discount_amount',   // Số tiền giảm giá coupon
+        'final_price',       // Giá cuối cùng = total_amount - level_discount - discount_amount
         'status',            // pending, confirmed, completed, cancelled, refund_processing, refunded
         'cancellation_reason', // Lý do hủy đơn
         'cancelled_by',      // User ID người hủy
@@ -44,6 +45,7 @@ class Booking extends Model
     {
         return [
             'total_amount' => 'decimal:0',
+            'level_discount_amount' => 'decimal:0',
             'discount_amount' => 'decimal:0',
             'final_price' => 'decimal:0',
             'cancelled_at' => 'datetime',

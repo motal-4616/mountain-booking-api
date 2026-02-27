@@ -25,6 +25,7 @@ class Coupon extends Model
         'start_date',
         'end_date',
         'is_active',
+        'min_level_required',
         'created_by',
     ];
 
@@ -42,6 +43,7 @@ class Coupon extends Model
             'start_date' => 'date',
             'end_date' => 'date',
             'is_active' => 'boolean',
+            'min_level_required' => 'integer',
         ];
     }
 

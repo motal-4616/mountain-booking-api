@@ -100,6 +100,20 @@ class ApiCouponController extends ApiController
                 );
             }
 
+            // Check minimum level required
+            if ($coupon->min_level_required > 0) {
+                $user = Auth::user();
+                $userLevel = $user->current_level ?? 1;
+                if ($userLevel < $coupon->min_level_required) {
+                    return $this->errorResponse(
+                        'Mã giảm giá này yêu cầu Level ' . $coupon->min_level_required . ' trở lên. Level hiện tại của bạn: ' . $userLevel,
+                        null,
+                        'COUPON_LEVEL_REQUIRED',
+                        400
+                    );
+                }
+            }
+
             // Calculate discount
             $discountAmount = $coupon->calculateDiscount($request->order_amount);
 

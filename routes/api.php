@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\ApiBlogController;
 use App\Http\Controllers\Api\ApiFriendController;
 use App\Http\Controllers\Api\ApiChatController;
 use App\Http\Controllers\Api\ApiJournalController;
+use App\Http\Controllers\Api\ApiLevelController;
 
 /*
 |--------------------------------------------------------------------------
@@ -81,6 +82,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/', [ApiProfileController::class, 'update']);
         Route::put('/password', [ApiProfileController::class, 'updatePassword']);
         Route::post('/avatar', [ApiProfileController::class, 'updateAvatar']);
+    });
+
+    // User Levels
+    Route::prefix('levels')->group(function () {
+        Route::get('/', [ApiLevelController::class, 'index']);
+        Route::get('/my-level', [ApiLevelController::class, 'myLevel']);
     });
 
     // Bookings

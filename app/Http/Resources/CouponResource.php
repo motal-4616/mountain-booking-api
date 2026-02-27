@@ -29,6 +29,7 @@ class CouponResource extends JsonResource
             'end_date' => $this->end_date?->format('Y-m-d'),
             'is_active' => $this->is_active,
             'is_valid' => $this->is_valid,
+            'min_level_required' => $this->min_level_required ?? 0,
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

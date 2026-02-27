@@ -12,6 +12,9 @@ class UserResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $levelInfo = $this->level_info;
+        $nextLevelInfo = $this->next_level_info;
+
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -24,6 +27,26 @@ class UserResource extends JsonResource
             'address' => $this->address,
             'date_of_birth' => $this->date_of_birth?->format('Y-m-d'),
             'is_blocked' => $this->is_blocked,
+            'current_level' => $this->current_level ?? 1,
+            'level_discount' => (float) ($this->level_discount ?? 0),
+            'level_info' => $levelInfo ? [
+                'level' => $levelInfo->level,
+                'name' => $levelInfo->name,
+                'icon' => $levelInfo->icon,
+                'frame_color' => $levelInfo->frame_color,
+                'discount_percent' => (float) $levelInfo->discount_percent,
+                'benefits' => $levelInfo->benefits,
+            ] : null,
+            'next_level_info' => $nextLevelInfo ? [
+                'level' => $nextLevelInfo->level,
+                'name' => $nextLevelInfo->name,
+                'icon' => $nextLevelInfo->icon,
+                'frame_color' => $nextLevelInfo->frame_color,
+                'discount_percent' => (float) $nextLevelInfo->discount_percent,
+                'required_tours' => $nextLevelInfo->required_tours,
+                'required_reviews' => $nextLevelInfo->required_reviews,
+                'required_blogs' => $nextLevelInfo->required_blogs,
+            ] : null,
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

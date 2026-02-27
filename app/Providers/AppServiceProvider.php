@@ -9,6 +9,12 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
+use App\Models\Booking;
+use App\Models\Review;
+use App\Models\BlogPost;
+use App\Observers\BookingObserver;
+use App\Observers\ReviewObserver;
+use App\Observers\BlogPostObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -25,6 +31,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Register observers for level system
+        Booking::observe(BookingObserver::class);
+        Review::observe(ReviewObserver::class);
+        BlogPost::observe(BlogPostObserver::class);
+
         // Register custom commands
         $this->commands([
             \App\Console\Commands\CheckSchedules::class,

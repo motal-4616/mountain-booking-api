@@ -53,6 +53,7 @@ class DatabaseSeeder extends Seeder
 
         // ===== TẠO DỮ LIỆU TOURS, SCHEDULES VÀ COUPONS =====
         $this->call([
+            UserLevelSeeder::class,
             TourSeeder::class,
             ScheduleSeeder::class,
             CouponSeeder::class,

@@ -144,21 +144,37 @@ class ApiBookingController extends ApiController
             // Calculate price
             $totalAmount = $schedule->price * $request->quantity;
             $discountAmount = 0;
+            $levelDiscountAmount = 0;
             $couponId = null;
 
-            // Apply coupon if provided
+            // Apply level discount first
+            $user = Auth::user();
+            $levelDiscount = $user->level_discount ?? 0;
+            if ($levelDiscount > 0) {
+                $levelDiscountAmount = round($totalAmount * ($levelDiscount / 100), 0);
+            }
+
+            // Apply coupon if provided (on amount after level discount)
+            $amountAfterLevel = $totalAmount - $levelDiscountAmount;
             if ($request->coupon_code) {
                 $coupon = Coupon::where('code', $request->coupon_code)->first();
                 
                 if ($coupon && $coupon->is_valid) {
-                    if ($totalAmount >= $coupon->min_order_amount) {
-                        $discountAmount = $coupon->calculateDiscount($totalAmount);
+                    // Check min_level_required for exclusive coupons
+                    if ($coupon->min_level_required > 0 && ($user->current_level ?? 1) < $coupon->min_level_required) {
+                        return $this->errorResponse(
+                            'Mã giảm giá này yêu cầu Level ' . $coupon->min_level_required . ' trở lên',
+                            null, 'COUPON_LEVEL_REQUIRED', 400
+                        );
+                    }
+                    if ($amountAfterLevel >= $coupon->min_order_amount) {
+                        $discountAmount = $coupon->calculateDiscount($amountAfterLevel);
                         $couponId = $coupon->id;
                     }
                 }
             }
 
-            $finalPrice = $totalAmount - $discountAmount;
+            $finalPrice = $totalAmount - $levelDiscountAmount - $discountAmount;
 
             // Create booking
             $booking = Booking::create([
@@ -171,6 +187,7 @@ class ApiBookingController extends ApiController
                 'contact_email' => $request->contact_email,
                 'note' => $request->note,
                 'total_amount' => $totalAmount,
+                'level_discount_amount' => $levelDiscountAmount,
                 'discount_amount' => $discountAmount,
                 'final_price' => $finalPrice,
                 'status' => 'pending',
