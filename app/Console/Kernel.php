@@ -15,6 +15,7 @@ class Kernel extends ConsoleKernel
     protected $commands = [
         \App\Console\Commands\CheckSchedules::class,
         \App\Console\Commands\UpdateCompletedBookings::class,
+        \App\Console\Commands\SendTourReminders::class,
     ];
 
     /**
@@ -24,6 +25,7 @@ class Kernel extends ConsoleKernel
     {
         $schedule->command('bookings:update-completed')->daily();
         $schedule->command('booking:check-schedules')->hourly();
+        $schedule->command('bookings:send-reminders')->dailyAt('08:00');
     }
 
     /**

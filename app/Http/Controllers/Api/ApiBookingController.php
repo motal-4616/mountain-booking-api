@@ -479,4 +479,60 @@ class ApiBookingController extends ApiController
 
         return $this->successResponse($stats, 'Lấy thống kê booking thành công');
     }
+
+    /**
+     * Download booking ticket as PDF
+     */
+    public function downloadTicket(Booking $booking)
+    {
+        // Check ownership
+        if ($booking->user_id !== Auth::id()) {
+            return $this->forbiddenResponse('Bạn không có quyền truy cập booking này');
+        }
+
+        // Only allow for confirmed or completed bookings
+        if (!in_array($booking->status, ['confirmed', 'completed'])) {
+            return $this->errorResponse('Chỉ có thể tải vé cho booking đã xác nhận hoặc hoàn thành', 400);
+        }
+
+        $booking->load(['schedule.tour', 'user', 'coupon', 'payments']);
+
+        // Generate QR code as data URL using simple-qrcode or inline SVG
+        $qrCodeDataUrl = $this->generateQrDataUrl($booking);
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.booking-ticket', [
+            'booking' => $booking,
+            'qrCodeDataUrl' => $qrCodeDataUrl,
+        ]);
+
+        $pdf->setPaper('A4', 'portrait');
+
+        $filename = "ve-{$booking->booking_code}.pdf";
+
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Generate a simple QR code data URL for the booking
+     */
+    private function generateQrDataUrl(Booking $booking): string
+    {
+        $content = "BOOKING:{$booking->booking_code}|ID:{$booking->id}";
+
+        // Use Google Charts API to generate QR code image
+        $size = 150;
+        $encodedContent = urlencode($content);
+        $url = "https://chart.googleapis.com/chart?chs={$size}x{$size}&cht=qr&chl={$encodedContent}&choe=UTF-8";
+
+        try {
+            $imageData = @file_get_contents($url);
+            if ($imageData) {
+                return 'data:image/png;base64,' . base64_encode($imageData);
+            }
+        } catch (\Exception $e) {
+            Log::warning("QR generation failed for booking {$booking->id}: " . $e->getMessage());
+        }
+
+        return '';
+    }
 }

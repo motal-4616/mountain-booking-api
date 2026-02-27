@@ -97,6 +97,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{booking}', [ApiBookingController::class, 'show']);
         Route::post('/', [ApiBookingController::class, 'store']);
         Route::patch('/{booking}/cancel', [ApiBookingController::class, 'cancel']);
+        Route::get('/{booking}/ticket', [ApiBookingController::class, 'downloadTicket']);
     });
 
     // Payments

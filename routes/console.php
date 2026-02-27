@@ -14,3 +14,6 @@ Schedule::command('bookings:update-completed')->daily();
 // Kiểm tra schedules đã đến hạn đăng ký - chạy mỗi giờ để real-time hơn
 Schedule::command('schedule:check-minimum')->hourly();
 
+// Gửi nhắc nhở tour trước khởi hành - chạy lúc 8:00 sáng mỗi ngày
+Schedule::command('bookings:send-reminders')->dailyAt('08:00');
+
