@@ -120,8 +120,8 @@ class ApiBookingController extends ApiController
 
         DB::beginTransaction();
         try {
-            // Get schedule
-            $schedule = Schedule::with('tour')->findOrFail($request->schedule_id);
+            // Get schedule with pessimistic lock to prevent race conditions
+            $schedule = Schedule::with('tour')->lockForUpdate()->findOrFail($request->schedule_id);
 
             // Validate schedule
             if (!$schedule->is_active) {
