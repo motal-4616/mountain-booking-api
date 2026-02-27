@@ -97,6 +97,12 @@
                                             <small class="text-muted">
                                                 <i class="bi bi-telephone me-1"></i>{{ $booking->contact_phone }}
                                             </small>
+                                            @if($booking->user && $booking->user->current_level > 1)
+                                                @php $lvl = $booking->user->level_info; @endphp
+                                                @if($lvl)
+                                                    <div><span class="badge" style="font-size:9px;padding:1px 6px;background:{{ $lvl->frame_color === 'gold' ? '#f59e0b' : ($lvl->frame_color === 'silver' ? '#9ca3af' : ($lvl->frame_color === 'green' ? '#10b981' : ($lvl->frame_color === 'diamond' ? '#3b82f6' : ($lvl->frame_color === 'legendary' ? '#8b5cf6' : '#6b7280')))) }};color:#fff;">{{ $lvl->icon }} Lv.{{ $lvl->level }}</span></div>
+                                                @endif
+                                            @endif
                                         </div>
                                     </div>
                                 </td>

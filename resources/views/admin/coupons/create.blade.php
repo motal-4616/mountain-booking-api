@@ -155,6 +155,24 @@
                         </div>
                     </div>
 
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Level tối thiểu</label>
+                            <select name="min_level_required" class="form-control form-control-modern @error('min_level_required') is-invalid @enderror">
+                                <option value="0" {{ old('min_level_required', 0) == 0 ? 'selected' : '' }}>Không yêu cầu (tất cả)</option>
+                                <option value="2" {{ old('min_level_required') == 2 ? 'selected' : '' }}>Lv.2 🥾 Khám phá trở lên</option>
+                                <option value="3" {{ old('min_level_required') == 3 ? 'selected' : '' }}>Lv.3 ⛰️ Nhà leo núi trở lên</option>
+                                <option value="4" {{ old('min_level_required') == 4 ? 'selected' : '' }}>Lv.4 🏔️ Chinh phục gia trở lên</option>
+                                <option value="5" {{ old('min_level_required') == 5 ? 'selected' : '' }}>Lv.5 🦅 Dũng sĩ trở lên</option>
+                                <option value="6" {{ old('min_level_required') == 6 ? 'selected' : '' }}>Lv.6 👑 Huyền thoại</option>
+                            </select>
+                            <small class="text-muted">Chỉ user đạt level này mới dùng được mã</small>
+                            @error('min_level_required')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+
                     <hr>
 
                     <div class="d-flex justify-content-between">

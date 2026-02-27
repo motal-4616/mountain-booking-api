@@ -81,6 +81,14 @@
                                             @if($user->id === auth()->id())
                                                 <span class="badge-modern badge-info" style="font-size:10px;padding:2px 8px;">Bạn</span>
                                             @endif
+                                            @if($user->role === 'user' && $user->current_level)
+                                                @php $levelInfo = $user->level_info; @endphp
+                                                @if($levelInfo)
+                                                    <span class="badge" style="font-size:10px;padding:2px 8px;background:{{ $levelInfo->frame_color === 'gold' ? '#f59e0b' : ($levelInfo->frame_color === 'silver' ? '#9ca3af' : ($levelInfo->frame_color === 'green' ? '#10b981' : ($levelInfo->frame_color === 'diamond' ? '#3b82f6' : ($levelInfo->frame_color === 'legendary' ? '#8b5cf6' : '#6b7280')))) }};color:#fff;">
+                                                        {{ $levelInfo->icon }} Lv.{{ $levelInfo->level }} {{ $levelInfo->name }}
+                                                    </span>
+                                                @endif
+                                            @endif
                                         </div>
                                     </div>
                                 </td>
