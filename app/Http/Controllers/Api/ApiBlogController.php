@@ -21,7 +21,7 @@ class ApiBlogController extends ApiController
     public function index(Request $request)
     {
         try {
-            $query = BlogPost::with(['user:id,name,avatar'])
+            $query = BlogPost::with(['user:id,name,avatar,current_level'])
                 ->published()
                 ->latest('published_at');
 
@@ -81,10 +81,10 @@ class ApiBlogController extends ApiController
     {
         try {
             $post = BlogPost::with([
-                'user:id,name,avatar,bio',
+                'user:id,name,avatar,current_level,bio',
                 'tour:id,name,location,difficulty',
                 'comments' => function ($q) {
-                    $q->with(['user:id,name,avatar', 'replies.user:id,name,avatar'])
+                    $q->with(['user:id,name,avatar,current_level', 'replies.user:id,name,avatar,current_level'])
                       ->whereNull('parent_id')
                       ->latest()
                       ->limit(20);
@@ -185,7 +185,7 @@ class ApiBlogController extends ApiController
                 'published_at' => $status === 'published' ? now() : null,
             ]);
 
-            $post->load('user:id,name,avatar');
+            $post->load('user:id,name,avatar,current_level');
 
             return $this->successResponse(
                 $this->formatPostDetail($post, $user),
@@ -254,7 +254,7 @@ class ApiBlogController extends ApiController
             }
 
             $post->update($data);
-            $post->load('user:id,name,avatar', 'tour:id,name,location');
+            $post->load('user:id,name,avatar,current_level', 'tour:id,name,location');
 
             return $this->successResponse(
                 $this->formatPostDetail($post, $request->user()),
@@ -307,7 +307,7 @@ class ApiBlogController extends ApiController
     public function myPosts(Request $request)
     {
         try {
-            $query = BlogPost::with('user:id,name,avatar')
+            $query = BlogPost::with('user:id,name,avatar,current_level')
                 ->byUser($request->user()->id)
                 ->latest();
 
@@ -339,7 +339,7 @@ class ApiBlogController extends ApiController
     public function userPosts(Request $request, int $userId)
     {
         try {
-            $query = BlogPost::with('user:id,name,avatar')
+            $query = BlogPost::with('user:id,name,avatar,current_level')
                 ->byUser($userId)
                 ->published()
                 ->latest('published_at');
@@ -440,7 +440,7 @@ class ApiBlogController extends ApiController
 
             $post->increment('comments_count');
 
-            $comment->load('user:id,name,avatar');
+            $comment->load('user:id,name,avatar,current_level');
 
             return $this->successResponse([
                 'id' => $comment->id,
@@ -582,6 +582,7 @@ class ApiBlogController extends ApiController
                 'id' => $post->user->id,
                 'name' => $post->user->name,
                 'avatar_url' => $post->user->avatar_url,
+                'current_level' => $post->user->current_level ?? 1,
             ],
             'published_at' => $post->published_at?->toISOString(),
             'created_at' => $post->created_at->toISOString(),

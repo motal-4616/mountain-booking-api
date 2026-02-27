@@ -397,6 +397,7 @@ class ApiChatController extends ApiController
                 'id' => $otherUser->id,
                 'name' => $otherUser->name,
                 'avatar_url' => $otherUser->avatar_url,
+                'current_level' => $otherUser->current_level ?? 1,
             ] : null,
             'last_message' => $conversation->lastMessage ? [
                 'id' => $conversation->lastMessage->id,

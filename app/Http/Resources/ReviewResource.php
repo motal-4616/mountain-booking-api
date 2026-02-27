@@ -28,6 +28,7 @@ class ReviewResource extends JsonResource
                     'id' => $this->user->id,
                     'name' => $this->user->name,
                     'avatar' => $this->user->avatar_url,
+                    'current_level' => $this->user->current_level ?? 1,
                 ];
             }),
             'tour' => $this->when($this->relationLoaded('tour'), function() {
