@@ -452,6 +452,7 @@ class ApiBlogController extends ApiController
                     'id' => $comment->user->id,
                     'name' => $comment->user->name,
                     'avatar_url' => $comment->user->avatar_url,
+                    'current_level' => $comment->user->current_level ?? 1,
                 ],
                 'replies' => [],
                 'created_at' => $comment->created_at->toISOString(),
@@ -629,6 +630,7 @@ class ApiBlogController extends ApiController
                 'id' => $comment->user->id,
                 'name' => $comment->user->name,
                 'avatar_url' => $comment->user->avatar_url,
+                'current_level' => $comment->user->current_level ?? 1,
             ],
             'replies' => $comment->relationLoaded('replies')
                 ? $comment->replies->map(fn($r) => $this->formatComment($r, $currentUser))
