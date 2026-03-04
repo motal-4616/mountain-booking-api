@@ -303,12 +303,8 @@ class ApiChatController extends ApiController
 
             $participant->update(['last_read_at' => now()]);
 
-            // Broadcast trạng thái đã đọc cho người kia
-            broadcast(new MessagesRead(
-                $conversationId,
-                $user->id,
-                now()->toISOString()
-            ))->toOthers();
+            // Không broadcast MessagesRead qua Pusher để tiết kiệm messages
+            // Chỉ cập nhật DB, trạng thái đã đọc sẽ được load khi mở lại chat
 
             return $this->successResponse(null, 'Đã đánh dấu đã đọc');
         } catch (\Exception $e) {
@@ -330,14 +326,8 @@ class ApiChatController extends ApiController
                 return $this->notFoundResponse('Không tìm thấy cuộc hội thoại');
             }
 
-            $isTyping = $request->input('is_typing', true);
-
-            broadcast(new UserTyping(
-                $conversationId,
-                $user->id,
-                $user->name,
-                $isTyping
-            ))->toOthers();
+            // Không broadcast typing qua Pusher để tiết kiệm messages
+            // Typing sẽ được xử lý phía frontend
 
             return $this->successResponse(null, 'OK');
         } catch (\Exception $e) {
