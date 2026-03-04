@@ -7,6 +7,10 @@ use App\Models\ConversationParticipant;
 use App\Models\Message;
 use App\Models\Friendship;
 use App\Models\User;
+use App\Events\NewChatMessage;
+use App\Events\MessagesRead;
+use App\Events\UserTyping;
+use App\Events\ConversationUpdated;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
@@ -243,8 +247,32 @@ class ApiChatController extends ApiController
 
             $message->load('user:id,name,avatar');
 
+            $formattedMessage = $this->formatMessage($message, $user);
+
+            // === BROADCAST REALTIME ===
+            // 1. Broadcast tin nhắn mới đến conversation channel
+            broadcast(new NewChatMessage($formattedMessage, $conversationId))->toOthers();
+
+            // 2. Notify các participant khác về conversation update (cho chat-list)
+            $otherParticipants = ConversationParticipant::where('conversation_id', $conversationId)
+                ->where('user_id', '!=', $user->id)
+                ->pluck('user_id');
+
+            $lastMessageData = [
+                'id' => $message->id,
+                'body' => $message->preview,
+                'type' => $message->type,
+                'user_name' => $message->user->name,
+                'is_mine' => false,
+                'created_at' => $message->created_at->toISOString(),
+            ];
+
+            foreach ($otherParticipants as $participantUserId) {
+                broadcast(new ConversationUpdated($conversationId, $participantUserId, $lastMessageData));
+            }
+
             return $this->successResponse(
-                $this->formatMessage($message, $user),
+                $formattedMessage,
                 'Gửi tin nhắn thành công',
                 201
             );
@@ -272,9 +300,45 @@ class ApiChatController extends ApiController
 
             $participant->update(['last_read_at' => now()]);
 
+            // Broadcast trạng thái đã đọc cho người kia
+            broadcast(new MessagesRead(
+                $conversationId,
+                $user->id,
+                now()->toISOString()
+            ))->toOthers();
+
             return $this->successResponse(null, 'Đã đánh dấu đã đọc');
         } catch (\Exception $e) {
             return $this->serverErrorResponse('Lỗi khi đánh dấu đã đọc: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Gửi trạng thái đang gõ
+     * POST /api/chat/conversations/{conversationId}/typing
+     */
+    public function typing(Request $request, int $conversationId)
+    {
+        try {
+            $user = $request->user();
+
+            $conversation = Conversation::find($conversationId);
+            if (!$conversation || !$conversation->hasParticipant($user->id)) {
+                return $this->notFoundResponse('Không tìm thấy cuộc hội thoại');
+            }
+
+            $isTyping = $request->input('is_typing', true);
+
+            broadcast(new UserTyping(
+                $conversationId,
+                $user->id,
+                $user->name,
+                $isTyping
+            ))->toOthers();
+
+            return $this->successResponse(null, 'OK');
+        } catch (\Exception $e) {
+            return $this->serverErrorResponse('Lỗi typing: ' . $e->getMessage());
         }
     }
 

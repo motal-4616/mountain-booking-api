@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\ApiFriendController;
 use App\Http\Controllers\Api\ApiChatController;
 use App\Http\Controllers\Api\ApiJournalController;
 use App\Http\Controllers\Api\ApiLevelController;
+use Illuminate\Support\Facades\Broadcast;
 
 /*
 |--------------------------------------------------------------------------
@@ -69,6 +70,9 @@ Route::get('/payments/vnpay/callback', [ApiPaymentController::class, 'vnpayCallb
 
 Route::middleware('auth:sanctum')->group(function () {
     
+    // Broadcasting authentication for WebSocket
+    Broadcast::routes(['middleware' => ['auth:sanctum']]);
+
     // Authentication
     Route::prefix('auth')->group(function () {
         Route::post('/logout', [ApiAuthController::class, 'logout']);
@@ -180,6 +184,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/conversations/{conversationId}/messages', [ApiChatController::class, 'messages']);
         Route::post('/conversations/{conversationId}/messages', [ApiChatController::class, 'sendMessage']);
         Route::post('/conversations/{conversationId}/read', [ApiChatController::class, 'markAsRead']);
+        Route::post('/conversations/{conversationId}/typing', [ApiChatController::class, 'typing']);
         Route::post('/conversations/{conversationId}/mute', [ApiChatController::class, 'toggleMute']);
         Route::delete('/messages/{messageId}', [ApiChatController::class, 'deleteMessage']);
         Route::get('/unread-count', [ApiChatController::class, 'unreadCount']);
