@@ -264,14 +264,151 @@ class BookingController extends Controller
         } else {
             $amount = $finalPrice;
         }
+
+        // Lưu thông tin thanh toán vào session để dùng tại bước checkout/confirm
+        session([
+            'checkout_info' => [
+                'customer_name' => $bookingObj->contact_name,
+                'customer_email' => $bookingObj->contact_email,
+                'customer_phone' => $bookingObj->contact_phone,
+                'payment_type' => $paymentType,
+                'deposit_percent' => $booking['deposit_percent'] ?? 30,
+                'notes' => $bookingObj->note,
+                'amount_to_pay' => $amount,
+            ]
+        ]);
+
+        // Redirect đến trang xác nhận thay vì VNPay trực tiếp
+        return redirect()->route('bookings.confirm', $bookingObj->id);
+    }
+
+    /**
+     * Bước 2: Trang xác nhận thông tin trước khi thanh toán VNPay
+     */
+    public function confirm(Booking $booking)
+    {
+        // Kiểm tra quyền
+        if ($booking->user_id !== (Auth::id() ?? 0)) {
+            abort(403, 'Bạn không có quyền truy cập.');
+        }
+
+        // Nếu đã thanh toán rồi thì redirect
+        if ($booking->payment_status === 'paid') {
+            return redirect()->route('bookings.show', $booking)
+                ->with('info', 'Đơn này đã được thanh toán.');
+        }
+
+        // Lấy thông tin checkout từ session 
+        $checkoutInfo = session('checkout_info');
+        if (!$checkoutInfo) {
+            // Nếu không có session (VD: truy cập trực tiếp URL), tạo lại từ booking
+            $checkoutInfo = [
+                'customer_name' => $booking->contact_name,
+                'customer_email' => $booking->contact_email,
+                'customer_phone' => $booking->contact_phone,
+                'payment_type' => $booking->deposit_percent > 0 ? 'deposit' : 'full',
+                'deposit_percent' => $booking->deposit_percent ?? 30,
+                'notes' => $booking->note,
+            ];
+        }
+
+        $booking->load(['schedule.tour', 'user', 'coupon']);
+        $tour = $booking->schedule->tour;
+        $schedule = $booking->schedule;
+
+        // Tính số tiền thanh toán
+        $finalPrice = $booking->final_price ?? $booking->total_amount;
+        if ($checkoutInfo['payment_type'] === 'deposit') {
+            $depositPercent = (int) ($checkoutInfo['deposit_percent'] ?? 30);
+            $amountToPay = round($finalPrice * $depositPercent / 100);
+            $remainingAmount = $finalPrice - $amountToPay;
+        } else {
+            $amountToPay = $finalPrice;
+            $remainingAmount = 0;
+        }
+
+        return view('bookings.confirm', compact(
+            'booking', 'tour', 'schedule',
+            'checkoutInfo', 'amountToPay', 'remainingAmount', 'finalPrice'
+        ));
+    }
+
+    /**
+     * Trang checkout cho booking đã tạo (nếu cần sửa thông tin)
+     */
+    public function checkout(Booking $booking)
+    {
+        if ($booking->user_id !== (Auth::id() ?? 0)) {
+            abort(403, 'Bạn không có quyền truy cập.');
+        }
+
+        if ($booking->payment_status === 'paid') {
+            return redirect()->route('bookings.show', $booking)
+                ->with('info', 'Đơn này đã được thanh toán.');
+        }
+
+        $booking->load(['schedule.tour', 'user', 'coupon']);
+        $tour = $booking->schedule->tour;
+        $schedule = $booking->schedule;
+
+        return view('bookings.checkout-edit', compact('booking', 'tour', 'schedule'));
+    }
+
+    /**
+     * Xử lý form checkout sửa thông tin → chuyển sang trang xác nhận
+     */
+    public function processCheckout(Request $request, Booking $booking)
+    {
+        if ($booking->user_id !== (Auth::id() ?? 0)) {
+            abort(403, 'Bạn không có quyền truy cập.');
+        }
+
+        $request->validate([
+            'contact_name' => 'required|string|max:255',
+            'contact_email' => 'required|email|max:255',
+            'contact_phone' => 'required|string|max:20',
+            'payment_type' => 'required|in:full,deposit',
+            'note' => 'nullable|string|max:500',
+        ], [
+            'contact_name.required' => 'Vui lòng nhập họ tên.',
+            'contact_email.required' => 'Vui lòng nhập email.',
+            'contact_email.email' => 'Email không hợp lệ.',
+            'contact_phone.required' => 'Vui lòng nhập số điện thoại.',
+            'payment_type.required' => 'Vui lòng chọn hình thức thanh toán.',
+        ]);
+
+        // Cập nhật thông tin khách hàng
+        $booking->update([
+            'contact_name' => $request->contact_name,
+            'contact_email' => $request->contact_email,
+            'contact_phone' => $request->contact_phone,
+            'note' => $request->note,
+        ]);
+
+        // Lưu thông tin vào session
+        $finalPrice = $booking->final_price ?? $booking->total_amount;
+        $paymentType = $request->payment_type;
+        $depositPercent = (int)($request->deposit_percent ?? 30);
         
-        $orderInfo = "Thanh toán booking #{$bookingObj->id} - Tour {$bookingObj->schedule->tour->name}";
+        if ($paymentType === 'deposit') {
+            $amountToPay = round($finalPrice * $depositPercent / 100);
+        } else {
+            $amountToPay = $finalPrice;
+        }
 
-        // Tạo URL thanh toán VNPay
-        $vnpayService = new VNPayService();
-        $paymentUrl = $vnpayService->createPaymentUrl($bookingObj, $amount, $orderInfo);
+        session([
+            'checkout_info' => [
+                'customer_name' => $request->contact_name,
+                'customer_email' => $request->contact_email,
+                'customer_phone' => $request->contact_phone,
+                'payment_type' => $paymentType,
+                'deposit_percent' => $depositPercent,
+                'notes' => $request->note,
+                'amount_to_pay' => $amountToPay,
+            ]
+        ]);
 
-        return redirect($paymentUrl);
+        return redirect()->route('bookings.confirm', $booking->id);
     }
 
     /**

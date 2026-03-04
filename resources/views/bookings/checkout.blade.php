@@ -897,7 +897,7 @@
     </script>
     @endif
 
-    <!-- Steps -->
+    <!-- Steps - 3 bước -->
     <div class="checkout-steps">
         <div class="checkout-step active">
             <span class="step-number">1</span>
@@ -908,6 +908,13 @@
         </div>
         <div class="checkout-step">
             <span class="step-number">2</span>
+            <span class="step-text">Xác nhận</span>
+        </div>
+        <div class="checkout-step-divider">
+            <i class="bi bi-arrow-right"></i>
+        </div>
+        <div class="checkout-step">
+            <span class="step-number">3</span>
             <span class="step-text">Hoàn tất</span>
         </div>
     </div>
@@ -1114,7 +1121,8 @@
                             Quay lại
                         </a>
                         <button type="submit" class="btn-checkout">
-                            Tiếp tục thanh toán
+                            <i class="bi bi-arrow-right-circle"></i>
+                            Tiếp tục xác nhận
                         </button>
                     </div>
                 </div>

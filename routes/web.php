@@ -70,7 +70,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/booking/create/{schedule}', [BookingController::class, 'create'])->name('bookings.create');
     Route::post('/booking', [BookingController::class, 'store'])->name('bookings.store');
     
-    // Thanh toán
+    // Thanh toán - Luồng 3 bước
+    Route::get('/booking/{booking}/checkout', [BookingController::class, 'checkout'])->name('bookings.checkout');
+    Route::post('/booking/{booking}/checkout', [BookingController::class, 'processCheckout'])->name('bookings.processCheckout');
+    Route::get('/booking/{booking}/confirm', [BookingController::class, 'confirm'])->name('bookings.confirm');
+    
+    // Thanh toán cũ (sandbox - giữ lại để tương thích)
     Route::get('/booking/{booking}/payment', [BookingController::class, 'payment'])->name('bookings.payment');
     Route::post('/booking/{booking}/process-payment', [BookingController::class, 'processPayment'])->name('bookings.processPayment');
     

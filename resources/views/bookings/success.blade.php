@@ -307,13 +307,22 @@
             <p>Cảm ơn bạn đã đặt tour tại MountainBook</p>
         </div>
 
-        <!-- Steps Progress -->
+        <!-- Steps Progress - 3 bước -->
         <div class="success-steps">
             <div class="success-step">
                 <span class="success-step-number">
                     <i class="bi bi-check"></i>
                 </span>
                 <span class="success-step-text">Thông tin đặt tour</span>
+            </div>
+            <div class="success-step-divider">
+                <i class="bi bi-arrow-right"></i>
+            </div>
+            <div class="success-step">
+                <span class="success-step-number">
+                    <i class="bi bi-check"></i>
+                </span>
+                <span class="success-step-text">Xác nhận</span>
             </div>
             <div class="success-step-divider">
                 <i class="bi bi-arrow-right"></i>
