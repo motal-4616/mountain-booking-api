@@ -13,9 +13,9 @@ class MessagesRead implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public int $conversationId;
-    public int $userId;
-    public string $readAt;
+    protected int $conversationId;
+    protected int $userId;
+    protected string $readAt;
 
     /**
      * Create a new event instance.

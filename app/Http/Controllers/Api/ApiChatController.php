@@ -251,7 +251,10 @@ class ApiChatController extends ApiController
 
             // === BROADCAST REALTIME ===
             // 1. Broadcast tin nhắn mới đến conversation channel
-            broadcast(new NewChatMessage($formattedMessage, $conversationId))->toOthers();
+            // Tạo bản copy cho broadcast với is_mine = false (vì người nhận không phải sender)
+            $broadcastMessage = $formattedMessage;
+            $broadcastMessage['is_mine'] = false;
+            broadcast(new NewChatMessage($broadcastMessage, $conversationId))->toOthers();
 
             // 2. Notify các participant khác về conversation update (cho chat-list)
             $otherParticipants = ConversationParticipant::where('conversation_id', $conversationId)

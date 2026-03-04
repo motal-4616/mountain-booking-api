@@ -13,9 +13,9 @@ class ConversationUpdated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public int $conversationId;
-    public int $userId;
-    public array $lastMessage;
+    protected int $conversationId;
+    protected int $userId;
+    protected array $lastMessage;
 
     /**
      * Notify a user that one of their conversations was updated (new message).

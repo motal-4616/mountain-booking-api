@@ -13,10 +13,10 @@ class UserTyping implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public int $conversationId;
-    public int $userId;
-    public string $userName;
-    public bool $isTyping;
+    protected int $conversationId;
+    protected int $userId;
+    protected string $userName;
+    protected bool $isTyping;
 
     /**
      * Create a new event instance.
