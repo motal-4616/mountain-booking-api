@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Models\BlogPost;
 use App\Models\BlogComment;
 use App\Models\BlogLike;
-use App\Models\Friendship;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;

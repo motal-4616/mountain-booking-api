@@ -513,26 +513,232 @@ class ApiBookingController extends ApiController
     }
 
     /**
-     * Generate a simple QR code data URL for the booking
+     * Generate a QR code as SVG data URL for the booking (no external API needed)
      */
     private function generateQrDataUrl(Booking $booking): string
     {
-        $content = "BOOKING:{$booking->booking_code}|ID:{$booking->id}";
-
-        // Use Google Charts API to generate QR code image
-        $size = 150;
-        $encodedContent = urlencode($content);
-        $url = "https://chart.googleapis.com/chart?chs={$size}x{$size}&cht=qr&chl={$encodedContent}&choe=UTF-8";
+        $content = "MOUNTAINBOOKING:{$booking->booking_code}:{$booking->id}";
 
         try {
-            $imageData = @file_get_contents($url);
-            if ($imageData) {
-                return 'data:image/png;base64,' . base64_encode($imageData);
-            }
+            $svg = $this->generateQrSvg($content, 150);
+            return 'data:image/svg+xml;base64,' . base64_encode($svg);
         } catch (\Exception $e) {
-            Log::warning("QR generation failed for booking {$booking->id}: " . $e->getMessage());
+            \Illuminate\Support\Facades\Log::warning("QR generation failed for booking {$booking->id}: " . $e->getMessage());
+            return '';
+        }
+    }
+
+    /**
+     * Generate QR code as SVG string using bit matrix encoding
+     */
+    private function generateQrSvg(string $data, int $size = 150): string
+    {
+        $matrix = $this->encodeQr($data);
+        $moduleCount = count($matrix);
+        $moduleSize = $size / $moduleCount;
+
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' . $size . '" height="' . $size . '" viewBox="0 0 ' . $size . ' ' . $size . '">';
+        $svg .= '<rect width="100%" height="100%" fill="#ffffff"/>';
+
+        for ($row = 0; $row < $moduleCount; $row++) {
+            for ($col = 0; $col < $moduleCount; $col++) {
+                if ($matrix[$row][$col]) {
+                    $x = round($col * $moduleSize, 2);
+                    $y = round($row * $moduleSize, 2);
+                    $w = round($moduleSize, 2);
+                    $svg .= '<rect x="' . $x . '" y="' . $y . '" width="' . $w . '" height="' . $w . '" fill="#1a1a2e"/>';
+                }
+            }
         }
 
-        return '';
+        $svg .= '</svg>';
+        return $svg;
+    }
+
+    /**
+     * Encode data into QR code bit matrix (Version 2, Error Correction L, Byte mode)
+     */
+    private function encodeQr(string $data): array
+    {
+        // QR Version 2: 25×25 modules, EC Level L, max 32 bytes
+        $version = 2;
+        $moduleCount = 17 + $version * 4; // 25
+
+        // Initialize matrix: null = not yet placed
+        $matrix = array_fill(0, $moduleCount, array_fill(0, $moduleCount, null));
+        $reserved = array_fill(0, $moduleCount, array_fill(0, $moduleCount, false));
+
+        // Place finder patterns (3 corners)
+        $this->placeFinderPattern($matrix, $reserved, 0, 0);
+        $this->placeFinderPattern($matrix, $reserved, $moduleCount - 7, 0);
+        $this->placeFinderPattern($matrix, $reserved, 0, $moduleCount - 7);
+
+        // Place alignment pattern for version 2 at (18, 18)
+        $this->placeAlignmentPattern($matrix, $reserved, 18, 18);
+
+        // Place timing patterns
+        for ($i = 8; $i < $moduleCount - 8; $i++) {
+            $val = ($i % 2 === 0) ? 1 : 0;
+            $matrix[6][$i] = $val; $reserved[6][$i] = true;
+            $matrix[$i][6] = $val; $reserved[$i][6] = true;
+        }
+
+        // Reserve format info areas
+        for ($i = 0; $i < 8; $i++) {
+            $reserved[$i][8] = true;
+            $reserved[8][$i] = true;
+            $reserved[$moduleCount - 1 - $i][8] = true;
+            $reserved[8][$moduleCount - 1 - $i] = true;
+        }
+        $reserved[8][8] = true;
+        $matrix[$moduleCount - 8][8] = 1; $reserved[$moduleCount - 8][8] = true; // dark module
+
+        // Encode data: byte mode indicator (0100), character count (8 bits), data bytes
+        $bits = '0100'; // Byte mode
+        $bits .= str_pad(decbin(strlen($data)), 8, '0', STR_PAD_LEFT);
+        for ($i = 0; $i < strlen($data); $i++) {
+            $bits .= str_pad(decbin(ord($data[$i])), 8, '0', STR_PAD_LEFT);
+        }
+        $bits .= '0000'; // Terminator
+
+        // Pad to required codewords (Version 2-L: 34 total data+EC codewords, 28 data)
+        $dataCodewords = 28;
+        while (strlen($bits) < $dataCodewords * 8) {
+            $bits .= (strlen($bits) / 8) % 2 === 0 ? '11101100' : '00010001';
+        }
+        $bits = substr($bits, 0, $dataCodewords * 8);
+
+        // Generate EC codewords using Reed-Solomon (simplified: 10 EC codewords for V2-L)
+        $codewords = [];
+        for ($i = 0; $i < strlen($bits); $i += 8) {
+            $codewords[] = bindec(substr($bits, $i, 8));
+        }
+        $ecCodewords = $this->generateECCodewords($codewords, 10);
+
+        // Combine data + EC into final bit string
+        $allBits = '';
+        foreach (array_merge($codewords, $ecCodewords) as $cw) {
+            $allBits .= str_pad(decbin($cw), 8, '0', STR_PAD_LEFT);
+        }
+
+        // Place data bits in matrix (upward/downward columns, right to left, skipping col 6)
+        $bitIndex = 0;
+        $up = true;
+        for ($col = $moduleCount - 1; $col >= 0; $col -= 2) {
+            if ($col === 6) $col = 5; // Skip timing column
+            $rows = $up ? range($moduleCount - 1, 0, -1) : range(0, $moduleCount - 1);
+            foreach ($rows as $row) {
+                for ($c = 0; $c < 2; $c++) {
+                    $curCol = $col - $c;
+                    if ($curCol < 0) continue;
+                    if (!$reserved[$row][$curCol]) {
+                        $matrix[$row][$curCol] = ($bitIndex < strlen($allBits)) ? (int)$allBits[$bitIndex++] : 0;
+                    }
+                }
+            }
+            $up = !$up;
+        }
+
+        // Apply mask pattern 0: (row + col) % 2 === 0
+        for ($row = 0; $row < $moduleCount; $row++) {
+            for ($col = 0; $col < $moduleCount; $col++) {
+                if (!$reserved[$row][$col] && ($row + $col) % 2 === 0) {
+                    $matrix[$row][$col] ^= 1;
+                }
+            }
+        }
+
+        // Place format info (EC Level L = 01, Mask 0 = 000 → 01000, with BCH)
+        $formatBits = '111011111000100'; // Pre-computed for L + mask 0
+        $formatPositions1 = [[0,8],[1,8],[2,8],[3,8],[4,8],[5,8],[7,8],[8,8],[8,7],[8,5],[8,4],[8,3],[8,2],[8,1],[8,0]];
+        $formatPositions2 = [[8,$moduleCount-1],[8,$moduleCount-2],[8,$moduleCount-3],[8,$moduleCount-4],[8,$moduleCount-5],[8,$moduleCount-6],[8,$moduleCount-7],[$moduleCount-7,8],[$moduleCount-6,8],[$moduleCount-5,8],[$moduleCount-4,8],[$moduleCount-3,8],[$moduleCount-2,8],[$moduleCount-1,8]];
+
+        for ($i = 0; $i < 15; $i++) {
+            $val = (int)$formatBits[$i];
+            [$r1, $c1] = $formatPositions1[$i];
+            $matrix[$r1][$c1] = $val;
+            if ($i < 14) {
+                [$r2, $c2] = $formatPositions2[$i];
+                $matrix[$r2][$c2] = $val;
+            }
+        }
+
+        // Fill any remaining nulls with 0
+        for ($row = 0; $row < $moduleCount; $row++) {
+            for ($col = 0; $col < $moduleCount; $col++) {
+                if ($matrix[$row][$col] === null) $matrix[$row][$col] = 0;
+            }
+        }
+
+        return $matrix;
+    }
+
+    private function placeFinderPattern(array &$matrix, array &$reserved, int $row, int $col): void
+    {
+        $pattern = [
+            [1,1,1,1,1,1,1],
+            [1,0,0,0,0,0,1],
+            [1,0,1,1,1,0,1],
+            [1,0,1,1,1,0,1],
+            [1,0,1,1,1,0,1],
+            [1,0,0,0,0,0,1],
+            [1,1,1,1,1,1,1],
+        ];
+        $size = count($matrix);
+        for ($r = -1; $r <= 7; $r++) {
+            for ($c = -1; $c <= 7; $c++) {
+                $mr = $row + $r; $mc = $col + $c;
+                if ($mr < 0 || $mr >= $size || $mc < 0 || $mc >= $size) continue;
+                if ($r >= 0 && $r < 7 && $c >= 0 && $c < 7) {
+                    $matrix[$mr][$mc] = $pattern[$r][$c];
+                } else {
+                    $matrix[$mr][$mc] = 0; // Separator
+                }
+                $reserved[$mr][$mc] = true;
+            }
+        }
+    }
+
+    private function placeAlignmentPattern(array &$matrix, array &$reserved, int $centerRow, int $centerCol): void
+    {
+        $pattern = [[1,1,1,1,1],[1,0,0,0,1],[1,0,1,0,1],[1,0,0,0,1],[1,1,1,1,1]];
+        for ($r = -2; $r <= 2; $r++) {
+            for ($c = -2; $c <= 2; $c++) {
+                $matrix[$centerRow + $r][$centerCol + $c] = $pattern[$r + 2][$c + 2];
+                $reserved[$centerRow + $r][$centerCol + $c] = true;
+            }
+        }
+    }
+
+    /**
+     * Generate Reed-Solomon error correction codewords (GF(256))
+     */
+    private function generateECCodewords(array $data, int $ecCount): array
+    {
+        // Generator polynomial coefficients for ecCount=10
+        $gp = [0, 251, 67, 46, 61, 118, 70, 64, 94, 32, 45];
+
+        // GF(256) tables
+        $expTable = []; $logTable = [];
+        $x = 1;
+        for ($i = 0; $i < 256; $i++) {
+            $expTable[$i] = $x;
+            $logTable[$x] = $i;
+            $x <<= 1;
+            if ($x >= 256) $x ^= 0x11d;
+        }
+
+        $result = array_fill(0, $ecCount, 0);
+        foreach ($data as $byte) {
+            $coef = $byte ^ $result[0];
+            array_shift($result);
+            $result[] = 0;
+            if ($coef === 0) continue;
+            $logCoef = $logTable[$coef];
+            for ($i = 0; $i < $ecCount; $i++) {
+                $result[$i] ^= $expTable[($logCoef + $gp[$i + 1]) % 255];
+            }
+        }
+        return $result;
     }
 }
