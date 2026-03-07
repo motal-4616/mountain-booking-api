@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Api;
 use App\Models\Booking;
 use App\Models\Schedule;
 use App\Models\Coupon;
+use App\Models\BookingPayment;
 use App\Http\Resources\BookingResource;
 use App\Services\NotificationService;
 use App\Services\VNPayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -225,6 +227,144 @@ class ApiBookingController extends ApiController
         } catch (\Exception $e) {
             DB::rollBack();
             return $this->serverErrorResponse('Có lỗi xảy ra khi đặt vé: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Checkout with VNPay - validates & caches booking data, returns VNPay URL
+     * Booking is NOT created until payment succeeds
+     */
+    public function checkoutVNPay(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'schedule_id' => ['required', 'exists:schedules,id'],
+            'quantity' => ['required', 'integer', 'min:1'],
+            'contact_name' => ['required', 'string', 'max:255'],
+            'contact_phone' => ['required', 'string', 'max:20'],
+            'contact_email' => ['required', 'email', 'max:255'],
+            'note' => ['nullable', 'string', 'max:500'],
+            'coupon_code' => ['nullable', 'string', 'exists:coupons,code'],
+            'payment_type' => ['nullable', 'in:full,deposit'],
+        ], [
+            'schedule_id.required' => 'Vui lòng chọn lịch khởi hành',
+            'schedule_id.exists' => 'Lịch khởi hành không hợp lệ',
+            'quantity.required' => 'Vui lòng nhập số lượng vé',
+            'quantity.min' => 'Số lượng vé tối thiểu là 1',
+            'contact_name.required' => 'Vui lòng nhập tên liên hệ',
+            'contact_phone.required' => 'Vui lòng nhập số điện thoại',
+            'contact_email.required' => 'Vui lòng nhập email',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationErrorResponse($validator->errors());
+        }
+
+        try {
+            $schedule = Schedule::with('tour')->findOrFail($request->schedule_id);
+
+            // Validate schedule
+            if (!$schedule->is_active) {
+                return $this->errorResponse('Lịch khởi hành không còn hoạt động', null, 'SCHEDULE_INACTIVE', 400);
+            }
+
+            if (!$schedule->can_register) {
+                return $this->errorResponse('Đã hết hạn đăng ký cho lịch này', null, 'REGISTRATION_CLOSED', 400);
+            }
+
+            if ($schedule->available_slots < $request->quantity) {
+                return $this->errorResponse(
+                    'Không đủ chỗ trống. Chỉ còn ' . $schedule->available_slots . ' chỗ',
+                    null, 'INSUFFICIENT_SLOTS', 400
+                );
+            }
+
+            // Calculate price (same logic as store)
+            $totalAmount = $schedule->price * $request->quantity;
+            $discountAmount = 0;
+            $levelDiscountAmount = 0;
+            $couponId = null;
+            $couponCode = null;
+
+            $user = Auth::user();
+            $levelDiscount = $user->level_discount ?? 0;
+            if ($levelDiscount > 0) {
+                $levelDiscountAmount = round($totalAmount * ($levelDiscount / 100), 0);
+            }
+
+            $amountAfterLevel = $totalAmount - $levelDiscountAmount;
+            if ($request->coupon_code) {
+                $coupon = Coupon::where('code', $request->coupon_code)->first();
+                if ($coupon && $coupon->is_valid) {
+                    if ($coupon->min_level_required > 0 && ($user->current_level ?? 1) < $coupon->min_level_required) {
+                        return $this->errorResponse(
+                            'Mã giảm giá này yêu cầu Level ' . $coupon->min_level_required . ' trở lên',
+                            null, 'COUPON_LEVEL_REQUIRED', 400
+                        );
+                    }
+                    if ($amountAfterLevel >= $coupon->min_order_amount) {
+                        $discountAmount = $coupon->calculateDiscount($amountAfterLevel);
+                        $couponId = $coupon->id;
+                        $couponCode = $coupon->code;
+                    }
+                }
+            }
+
+            $finalPrice = $totalAmount - $levelDiscountAmount - $discountAmount;
+            $paymentType = $request->payment_type ?? 'full';
+            $amountToPay = $paymentType === 'deposit' ? ceil($finalPrice * 0.3) : $finalPrice;
+
+            if ($amountToPay < 10000) {
+                return $this->errorResponse('Số tiền thanh toán phải ít nhất 10,000 VNĐ', null, 'AMOUNT_TOO_LOW', 400);
+            }
+
+            // Generate unique TxnRef (C = checkout, not an existing booking ID)
+            $txnRef = 'C' . Auth::id() . '_' . time();
+
+            // Cache booking data for 30 minutes
+            $bookingData = [
+                'user_id' => Auth::id(),
+                'schedule_id' => $schedule->id,
+                'coupon_id' => $couponId,
+                'coupon_code' => $couponCode,
+                'quantity' => (int) $request->quantity,
+                'contact_name' => $request->contact_name,
+                'contact_phone' => $request->contact_phone,
+                'contact_email' => $request->contact_email,
+                'note' => $request->note,
+                'total_amount' => $totalAmount,
+                'level_discount_amount' => $levelDiscountAmount,
+                'discount_amount' => $discountAmount,
+                'final_price' => $finalPrice,
+                'payment_type' => $paymentType,
+                'amount_to_pay' => $amountToPay,
+            ];
+
+            Cache::put("vnpay_checkout_{$txnRef}", $bookingData, 1800);
+
+            // Generate VNPay URL
+            $orderInfo = "Thanh toán tour {$schedule->tour->name}";
+            $appReturnUrl = url('/payment/vnpay/app-return');
+            $vnpayUrl = $this->vnPayService->createPaymentUrl($txnRef, $amountToPay, $orderInfo, $appReturnUrl);
+
+            return $this->successResponse([
+                'payment_url' => $vnpayUrl,
+                'txn_ref' => $txnRef,
+                'booking_preview' => [
+                    'tour_name' => $schedule->tour->name,
+                    'tour_image' => $schedule->tour->image,
+                    'departure_date' => $schedule->departure_date,
+                    'quantity' => (int) $request->quantity,
+                    'total_amount' => (float) $totalAmount,
+                    'level_discount' => (float) $levelDiscountAmount,
+                    'coupon_discount' => (float) $discountAmount,
+                    'final_price' => (float) $finalPrice,
+                    'amount_to_pay' => (float) $amountToPay,
+                    'payment_type' => $paymentType,
+                ],
+            ], 'Tạo payment URL thành công');
+
+        } catch (\Exception $e) {
+            return $this->serverErrorResponse('Có lỗi xảy ra: ' . $e->getMessage());
         }
     }
 

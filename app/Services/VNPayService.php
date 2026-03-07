@@ -48,10 +48,14 @@ class VNPayService
     /**
      * Tạo URL thanh toán VNPay
      */
-    public function createPaymentUrl($booking, $amount, $orderInfo = '', $returnUrl = null)
+    public function createPaymentUrl($bookingOrTxnRef, $amount, $orderInfo = '', $returnUrl = null)
     {
-        $vnp_TxnRef = $booking->id . '_' . time();
-        $vnp_OrderInfo = $orderInfo ?: "Thanh toán booking #{$booking->id}";
+        if (is_string($bookingOrTxnRef)) {
+            $vnp_TxnRef = $bookingOrTxnRef;
+        } else {
+            $vnp_TxnRef = $bookingOrTxnRef->id . '_' . time();
+        }
+        $vnp_OrderInfo = $orderInfo ?: "Thanh toán đặt tour";
         $vnp_OrderType = 'billpayment';
         $vnp_Amount = (int)($amount * 100); // VNPay yêu cầu số tiền * 100, phải là integer
         $vnp_Locale = 'vn';

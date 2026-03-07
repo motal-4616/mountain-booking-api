@@ -98,6 +98,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('bookings')->group(function () {
         Route::get('/', [ApiBookingController::class, 'index']);
         Route::get('/statistics', [ApiBookingController::class, 'statistics']);
+        Route::post('/checkout-vnpay', [ApiBookingController::class, 'checkoutVNPay']);
         Route::get('/{booking}', [ApiBookingController::class, 'show']);
         Route::post('/', [ApiBookingController::class, 'store']);
         Route::patch('/{booking}/cancel', [ApiBookingController::class, 'cancel']);
@@ -108,6 +109,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('payments')->group(function () {
         Route::post('/vnpay', [ApiPaymentController::class, 'createVNPayPayment']);
         Route::post('/cash', [ApiPaymentController::class, 'createCashPayment']);
+        Route::get('/checkout-result', [ApiPaymentController::class, 'checkoutResult']);
         Route::get('/{booking}', [ApiPaymentController::class, 'getPaymentHistory']);
     });
 
