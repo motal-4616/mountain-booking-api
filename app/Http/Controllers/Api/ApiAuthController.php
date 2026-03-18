@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
@@ -207,18 +208,32 @@ class ApiAuthController extends ApiController
             'created_at' => now(),
         ]);
 
-        // Send OTP via email
+        // Send OTP via Brevo HTTP API (bypass SMTP port blocking)
         try {
-            Mail::send('emails.reset-password', ['otp' => $otp], function ($message) use ($email) {
-                $message->to($email)
-                    ->subject('Mã OTP đặt lại mật khẩu - Mountain Booking');
-            });
+            $brevoKey = config('services.brevo.key');
+            $fromEmail = config('mail.from.address', 'xmeosadx@gmail.com');
+            $fromName = config('mail.from.name', 'Mountain Booking');
+
+            $response = Http::withHeaders([
+                'api-key' => $brevoKey,
+                'Content-Type' => 'application/json',
+            ])->timeout(15)->post('https://api.brevo.com/v3/smtp/email', [
+                'sender' => ['name' => $fromName, 'email' => $fromEmail],
+                'to' => [['email' => $email]],
+                'subject' => 'Mã OTP đặt lại mật khẩu - Mountain Booking',
+                'htmlContent' => view('emails.reset-password', ['otp' => $otp])->render(),
+            ]);
+
+            if (!$response->successful()) {
+                throw new \Exception('Brevo API: ' . $response->body());
+            }
+
             Log::info("Password reset OTP sent to: {$email}");
         } catch (\Exception $e) {
             Log::error("Failed to send OTP email to {$email}: " . $e->getMessage());
             DB::table('password_reset_tokens')->where('email', $email)->delete();
             return $this->errorResponse(
-                'Không thể gửi email. Vui lòng thử lại sau. Lỗi: ' . $e->getMessage(),
+                'Không thể gửi email. Vui lòng thử lại sau.',
                 null, 'EMAIL_SEND_FAILED', 500
             );
         }
