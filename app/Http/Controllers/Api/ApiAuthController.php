@@ -207,28 +207,25 @@ class ApiAuthController extends ApiController
             'created_at' => now(),
         ]);
 
-        // Try sending email (best effort - may fail on some hosting)
-        $emailSent = false;
+        // Send OTP via email
         try {
             Mail::send('emails.reset-password', ['otp' => $otp], function ($message) use ($email) {
                 $message->to($email)
                     ->subject('Mã OTP đặt lại mật khẩu - Mountain Booking');
             });
-            $emailSent = true;
             Log::info("Password reset OTP sent to: {$email}");
         } catch (\Exception $e) {
             Log::error("Failed to send OTP email to {$email}: " . $e->getMessage());
+            DB::table('password_reset_tokens')->where('email', $email)->delete();
+            return $this->errorResponse(
+                'Không thể gửi email. Vui lòng thử lại sau. Lỗi: ' . $e->getMessage(),
+                null, 'EMAIL_SEND_FAILED', 500
+            );
         }
 
         return $this->successResponse(
-            [
-                'otp' => $otp,
-                'email_sent' => $emailSent,
-                'expires_in' => 60,
-            ],
-            $emailSent
-                ? 'Mã OTP đã được gửi đến email của bạn.'
-                : 'Mã OTP đã được tạo.'
+            ['expires_in' => 60],
+            'Mã OTP đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư (kể cả thư rác).'
         );
     }
 
