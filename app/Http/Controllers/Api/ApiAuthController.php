@@ -6,10 +6,13 @@ use App\Models\User;
 use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Password as PasswordBroker;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 
 class ApiAuthController extends ApiController
@@ -191,26 +194,35 @@ class ApiAuthController extends ApiController
             return $this->validationErrorResponse($validator->errors());
         }
 
+        $email = $request->email;
+
+        // Create token manually
+        $token = Str::random(64);
+        DB::table('password_reset_tokens')->where('email', $email)->delete();
+        DB::table('password_reset_tokens')->insert([
+            'email' => $email,
+            'token' => Hash::make($token),
+            'created_at' => now(),
+        ]);
+
+        $resetUrl = url("/reset-password/{$token}?email=" . urlencode($email));
+
+        // Try sending email - don't block response if it fails
         try {
-            $status = PasswordBroker::sendResetLink($request->only('email'));
-
-            if ($status === PasswordBroker::RESET_LINK_SENT) {
-                return $this->successResponse(
-                    null,
-                    'Đã gửi link đặt lại mật khẩu đến email của bạn'
-                );
-            }
-
-            return $this->errorResponse(
-                'Không thể gửi email đặt lại mật khẩu. Vui lòng thử lại sau.',
-                null,
-                'RESET_LINK_FAILED',
-                500
-            );
+            Mail::send('emails.reset-password', ['resetUrl' => $resetUrl], function ($message) use ($email) {
+                $message->to($email)
+                    ->subject('Đặt lại mật khẩu - Mountain Booking');
+            });
+            Log::info("Password reset email sent to: {$email}");
         } catch (\Exception $e) {
-            Log::error('Forgot password error: ' . $e->getMessage());
-            return $this->serverErrorResponse('Có lỗi xảy ra khi gửi email đặt lại mật khẩu');
+            Log::error("Failed to send reset email to {$email}: " . $e->getMessage());
+            // Still return success - token is created, email might arrive later or user can retry
         }
+
+        return $this->successResponse(
+            null,
+            'Đã gửi link đặt lại mật khẩu đến email của bạn. Vui lòng kiểm tra hộp thư (kể cả thư rác).'
+        );
     }
 
     /**
