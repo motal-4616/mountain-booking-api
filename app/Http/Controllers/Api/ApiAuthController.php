@@ -178,7 +178,7 @@ class ApiAuthController extends ApiController
     }
 
     /**
-     * Forgot password (send reset link)
+     * Forgot password - send OTP code
      */
     public function forgotPassword(Request $request)
     {
@@ -196,46 +196,53 @@ class ApiAuthController extends ApiController
 
         $email = $request->email;
 
-        // Create token manually
-        $token = Str::random(64);
+        // Generate 6-digit OTP
+        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        // Store OTP in password_reset_tokens table (hash for security)
         DB::table('password_reset_tokens')->where('email', $email)->delete();
         DB::table('password_reset_tokens')->insert([
             'email' => $email,
-            'token' => Hash::make($token),
+            'token' => Hash::make($otp),
             'created_at' => now(),
         ]);
 
-        $resetUrl = url("/reset-password/{$token}?email=" . urlencode($email));
-
-        // Try sending email - don't block response if it fails
+        // Try sending email with OTP
+        $emailSent = false;
         try {
-            Mail::send('emails.reset-password', ['resetUrl' => $resetUrl], function ($message) use ($email) {
+            Mail::send('emails.reset-password', ['otp' => $otp], function ($message) use ($email) {
                 $message->to($email)
-                    ->subject('Đặt lại mật khẩu - Mountain Booking');
+                    ->subject('Mã OTP đặt lại mật khẩu - Mountain Booking');
             });
-            Log::info("Password reset email sent to: {$email}");
+            $emailSent = true;
+            Log::info("Password reset OTP sent to: {$email}");
         } catch (\Exception $e) {
-            Log::error("Failed to send reset email to {$email}: " . $e->getMessage());
-            // Still return success - token is created, email might arrive later or user can retry
+            Log::error("Failed to send OTP email to {$email}: " . $e->getMessage());
         }
 
         return $this->successResponse(
-            null,
-            'Đã gửi link đặt lại mật khẩu đến email của bạn. Vui lòng kiểm tra hộp thư (kể cả thư rác).'
+            [
+                'otp' => $otp, // Return OTP directly for mobile app (email may not work)
+                'email_sent' => $emailSent,
+                'expires_in' => 60, // minutes
+            ],
+            'Mã OTP đã được tạo. Vui lòng nhập mã để đặt lại mật khẩu.'
         );
     }
 
     /**
-     * Reset password
+     * Reset password with OTP
      */
     public function resetPassword(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'email' => ['required', 'email'],
-            'token' => ['required'],
+            'otp' => ['required', 'string', 'size:6'],
             'password' => ['required', 'confirmed', Password::defaults()],
         ], [
             'email.required' => 'Vui lòng nhập email',
+            'otp.required' => 'Vui lòng nhập mã OTP',
+            'otp.size' => 'Mã OTP phải gồm 6 chữ số',
             'password.required' => 'Vui lòng nhập mật khẩu mới',
             'password.confirmed' => 'Xác nhận mật khẩu không khớp',
         ]);
@@ -244,27 +251,43 @@ class ApiAuthController extends ApiController
             return $this->validationErrorResponse($validator->errors());
         }
 
-        $status = PasswordBroker::reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
-            function ($user, $password) {
-                $user->forceFill([
-                    'password' => Hash::make($password),
-                ])->save();
+        // Find token record
+        $record = DB::table('password_reset_tokens')
+            ->where('email', $request->email)
+            ->first();
 
-                // Revoke all API tokens so user must re-login
-                $user->tokens()->delete();
-            }
-        );
-
-        if ($status === PasswordBroker::PASSWORD_RESET) {
-            return $this->successResponse(null, 'Đặt lại mật khẩu thành công');
+        if (!$record) {
+            return $this->errorResponse(
+                'Mã OTP không hợp lệ hoặc đã hết hạn.',
+                null, 'INVALID_OTP', 400
+            );
         }
 
-        return $this->errorResponse(
-            'Token không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu gửi lại email.',
-            null,
-            'RESET_FAILED',
-            400
-        );
+        // Check expiry (60 minutes)
+        if (now()->diffInMinutes($record->created_at) > 60) {
+            DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+            return $this->errorResponse(
+                'Mã OTP đã hết hạn. Vui lòng yêu cầu mã mới.',
+                null, 'OTP_EXPIRED', 400
+            );
+        }
+
+        // Verify OTP
+        if (!Hash::check($request->otp, $record->token)) {
+            return $this->errorResponse(
+                'Mã OTP không chính xác.',
+                null, 'WRONG_OTP', 400
+            );
+        }
+
+        // Reset password
+        $user = User::where('email', $request->email)->first();
+        $user->forceFill(['password' => Hash::make($request->password)])->save();
+        $user->tokens()->delete();
+
+        // Clean up token
+        DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+
+        return $this->successResponse(null, 'Đặt lại mật khẩu thành công! Vui lòng đăng nhập lại.');
     }
 }
