@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Password as PasswordBroker;
 use Illuminate\Validation\Rules\Password;
 
 class ApiAuthController extends ApiController
@@ -190,12 +191,26 @@ class ApiAuthController extends ApiController
             return $this->validationErrorResponse($validator->errors());
         }
 
-        // TODO: Implement password reset logic with email
-        // For now, just return success
-        return $this->successResponse(
-            null,
-            'Đã gửi link đặt lại mật khẩu đến email của bạn'
-        );
+        try {
+            $status = PasswordBroker::sendResetLink($request->only('email'));
+
+            if ($status === PasswordBroker::RESET_LINK_SENT) {
+                return $this->successResponse(
+                    null,
+                    'Đã gửi link đặt lại mật khẩu đến email của bạn'
+                );
+            }
+
+            return $this->errorResponse(
+                'Không thể gửi email đặt lại mật khẩu. Vui lòng thử lại sau.',
+                null,
+                'RESET_LINK_FAILED',
+                500
+            );
+        } catch (\Exception $e) {
+            Log::error('Forgot password error: ' . $e->getMessage());
+            return $this->serverErrorResponse('Có lỗi xảy ra khi gửi email đặt lại mật khẩu');
+        }
     }
 
     /**
@@ -204,19 +219,40 @@ class ApiAuthController extends ApiController
     public function resetPassword(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'email' => ['required', 'email', 'exists:users,email'],
+            'email' => ['required', 'email'],
             'token' => ['required'],
             'password' => ['required', 'confirmed', Password::defaults()],
+        ], [
+            'email.required' => 'Vui lòng nhập email',
+            'password.required' => 'Vui lòng nhập mật khẩu mới',
+            'password.confirmed' => 'Xác nhận mật khẩu không khớp',
         ]);
 
         if ($validator->fails()) {
             return $this->validationErrorResponse($validator->errors());
         }
 
-        // TODO: Implement password reset logic
-        return $this->successResponse(
+        $status = PasswordBroker::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function ($user, $password) {
+                $user->forceFill([
+                    'password' => Hash::make($password),
+                ])->save();
+
+                // Revoke all API tokens so user must re-login
+                $user->tokens()->delete();
+            }
+        );
+
+        if ($status === PasswordBroker::PASSWORD_RESET) {
+            return $this->successResponse(null, 'Đặt lại mật khẩu thành công');
+        }
+
+        return $this->errorResponse(
+            'Token không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu gửi lại email.',
             null,
-            'Đặt lại mật khẩu thành công'
+            'RESET_FAILED',
+            400
         );
     }
 }

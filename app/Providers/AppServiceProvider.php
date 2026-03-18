@@ -15,6 +15,7 @@ use App\Models\BlogPost;
 use App\Observers\BookingObserver;
 use App\Observers\ReviewObserver;
 use App\Observers\BlogPostObserver;
+use Illuminate\Auth\Notifications\ResetPassword;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -31,6 +32,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Customize password reset link URL for email
+        ResetPassword::createUrlUsing(function ($user, string $token) {
+            return url("/reset-password/{$token}?email=" . urlencode($user->email));
+        });
+
         // Register observers for level system
         Booking::observe(BookingObserver::class);
         Review::observe(ReviewObserver::class);

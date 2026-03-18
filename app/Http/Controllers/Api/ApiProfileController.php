@@ -73,11 +73,11 @@ class ApiProfileController extends ApiController
     {
         $validator = Validator::make($request->all(), [
             'current_password' => ['required'],
-            'password' => ['required', 'confirmed', Password::defaults()],
+            'new_password' => ['required', 'confirmed', Password::defaults()],
         ], [
             'current_password.required' => 'Vui lòng nhập mật khẩu hiện tại',
-            'password.required' => 'Vui lòng nhập mật khẩu mới',
-            'password.confirmed' => 'Xác nhận mật khẩu không khớp',
+            'new_password.required' => 'Vui lòng nhập mật khẩu mới',
+            'new_password.confirmed' => 'Xác nhận mật khẩu không khớp',
         ]);
 
         if ($validator->fails()) {
@@ -96,9 +96,19 @@ class ApiProfileController extends ApiController
             );
         }
 
+        // Check new password is different from current password
+        if (Hash::check($request->new_password, $user->password)) {
+            return $this->errorResponse(
+                'Mật khẩu mới không được trùng với mật khẩu hiện tại',
+                ['new_password' => ['Mật khẩu mới phải khác mật khẩu hiện tại']],
+                'SAME_PASSWORD',
+                400
+            );
+        }
+
         try {
             $user->update([
-                'password' => Hash::make($request->password),
+                'password' => Hash::make($request->new_password),
             ]);
 
             // Optionally revoke all tokens except current
